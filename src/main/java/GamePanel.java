@@ -7,25 +7,65 @@ import java.awt.Graphics2D;
 public class GamePanel extends JPanel implements Runnable {
 
     // USTAWIENIA EKRANU
-    final int originalTileSize = 16; // Klasyczny kafel 16x16 pikseli
-    final int scale = 3; // Skalujemy x3, żeby gra nie była mikroskopijna
-    public final int tileSize = originalTileSize * scale; // Pojedyncze pole będzie miało 48x48 px
+    final int originalTileSize = 16;
+    final int scale = 3;
+    public final int tileSize = originalTileSize * scale;
 
-    // Klasyczna plansza Bombermana ma zazwyczaj nieparzystą liczbę wierszy i kolumn
     public final int maxScreenCol = 15;
     public final int maxScreenRow = 13;
-    final int screenWidth = tileSize * maxScreenCol; // 720 pikseli szerokości
-    final int screenHeight = tileSize * maxScreenRow; // 624 piksele wysokości
+    final int screenWidth = tileSize * maxScreenCol;
+    final int screenHeight = tileSize * maxScreenRow;
 
     // PĘTLA GRY
     int FPS = 60;
     Thread gameThread;
 
+    // MAPA GRY
+    public int[][] map;
+
+    // INICJALIZACJA KLAS (Klawiatura i Gracz)
+    public KeyHandler keyH = new KeyHandler();
+    public Player player = new Player(this, keyH);
+
     public GamePanel() {
         this.setPreferredSize(new Dimension(screenWidth, screenHeight));
         this.setBackground(Color.BLACK);
-        // Podwójne buforowanie zapobiega migotaniu ekranu podczas rysowania
         this.setDoubleBuffered(true);
+
+        // Nasłuchiwanie klawiatury
+        this.addKeyListener(keyH);
+        this.setFocusable(true); // Wymagane, by panel przyjmował wciskane klawisze
+
+        // Inicjalizacja i generowanie mapy
+        map = new int[maxScreenCol][maxScreenRow];
+        generateMap();
+    }
+
+    public void generateMap() {
+        for (int x = 0; x < maxScreenCol; x++) {
+            for (int y = 0; y < maxScreenRow; y++) {
+
+                // 1. Niezniszczalne bloki (układ szachownicy) na nieparzystych indeksach
+                if (x % 2 != 0 && y % 2 != 0) {
+                    map[x][y] = 1;
+                }
+                else {
+                    // 2. Strefa startowa (bezpieczna, bez skrzynek)
+                    boolean isSafeZone = (x == 0 && y == 0) || (x == 1 && y == 0) || (x == 0 && y == 1);
+
+                    if (!isSafeZone) {
+                        // 3. Losowe generowanie skrzynek
+                        if (Math.random() < 0.4) {
+                            map[x][y] = 2;
+                        } else {
+                            map[x][y] = 0;
+                        }
+                    } else {
+                        map[x][y] = 0;
+                    }
+                }
+            }
+        }
     }
 
     public void startGameThread() {
@@ -35,28 +75,27 @@ public class GamePanel extends JPanel implements Runnable {
 
     @Override
     public void run() {
-        // Obliczamy czas trwania jednej klatki (1 sekunda = 1 mld nanosekund)
         double drawInterval = 1000000000.0 / FPS;
         double delta = 0;
         long lastTime = System.nanoTime();
         long currentTime;
 
-        // Główna pętla gry
         while (gameThread != null) {
             currentTime = System.nanoTime();
             delta += (currentTime - lastTime) / drawInterval;
             lastTime = currentTime;
 
             if (delta >= 1) {
-                update(); // 1. Zaktualizuj informacje (np. pozycję gracza)
-                repaint(); // 2. Narysuj zaktualizowany ekran (wywołuje paintComponent)
+                update();
+                repaint();
                 delta--;
             }
         }
     }
 
     public void update() {
-        // Tutaj będziemy aktualizować logikę, na razie zostawiamy puste
+        // Aktualizacja logiki gracza (ruch i kolizje)
+        player.update();
     }
 
     @Override
@@ -64,11 +103,25 @@ public class GamePanel extends JPanel implements Runnable {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
 
-        // TEST RENDEROWANIA: Narysujmy biały kwadrat na środku ekranu,
-        // żeby upewnić się, że wszystko działa.
-        g2.setColor(Color.WHITE);
-        g2.fillRect(screenWidth / 2 - tileSize / 2, screenHeight / 2 - tileSize / 2, tileSize, tileSize);
+        // 1. Rysowanie planszy (najpierw, żeby tło było pod spodem)
+        for (int x = 0; x < maxScreenCol; x++) {
+            for (int y = 0; y < maxScreenRow; y++) {
+                int screenX = x * tileSize;
+                int screenY = y * tileSize;
 
-        g2.dispose(); // Dobra praktyka: zwalnianie pamięci obiektu Graphics
+                if (map[x][y] == 1) {
+                    g2.setColor(Color.GRAY);
+                    g2.fillRect(screenX, screenY, tileSize, tileSize);
+                } else if (map[x][y] == 2) {
+                    g2.setColor(new Color(139, 69, 19));
+                    g2.fillRect(screenX, screenY, tileSize, tileSize);
+                }
+            }
+        }
+
+        // 2. Rysowanie gracza (na wierzchu)
+        player.draw(g2);
+
+        g2.dispose();
     }
 }
