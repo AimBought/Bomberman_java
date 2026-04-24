@@ -4,9 +4,10 @@ import java.awt.event.KeyListener;
 public class KeyHandler implements KeyListener {
 
     public boolean upPressed, downPressed, leftPressed, rightPressed;
+    public boolean spacePressed; // NOWE: Przycisk bomby
 
     @Override
-    public void keyTyped(KeyEvent e) {} // Nie używamy
+    public void keyTyped(KeyEvent e) {}
 
     @Override
     public void keyPressed(KeyEvent e) {
@@ -15,6 +16,7 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) downPressed = true;
         if (code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT) leftPressed = true;
         if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) rightPressed = true;
+        if (code == KeyEvent.VK_SPACE) spacePressed = true; // NOWE
     }
 
     @Override
@@ -24,5 +26,6 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) downPressed = false;
         if (code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT) leftPressed = false;
         if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) rightPressed = false;
+        if (code == KeyEvent.VK_SPACE) spacePressed = false; // NOWE
     }
 }
