@@ -52,9 +52,8 @@ public class KeyHandler implements KeyListener {
             }
             if (code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER) {
                 if (gp.ui.commandNum == 20) {
-                    // ZMIANA: Powrót z opcji tam, skąd przyszliśmy!
                     gp.currentState = gp.previousState;
-                    gp.ui.commandNum = (gp.previousState == GameState.MENU) ? 2 : 2;
+                    gp.ui.commandNum = (gp.previousState == GameState.MENU) ? 3 : 2;
                 } else {
                     waitingForKey = true;
                     keyToRebind = gp.ui.commandNum;
@@ -62,22 +61,27 @@ public class KeyHandler implements KeyListener {
             }
             if (code == KeyEvent.VK_ESCAPE) {
                 gp.currentState = gp.previousState;
-                gp.ui.commandNum = (gp.previousState == GameState.MENU) ? 2 : 2;
+                gp.ui.commandNum = (gp.previousState == GameState.MENU) ? 3 : 2;
             }
         }
         else if (gp.currentState == GameState.MENU) {
             if (code == KeyEvent.VK_W || code == KeyEvent.VK_UP) {
                 gp.ui.commandNum--;
-                if (gp.ui.commandNum < 0) gp.ui.commandNum = 3;
+                if (gp.ui.commandNum < 0) gp.ui.commandNum = 4;
             }
             if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) {
                 gp.ui.commandNum++;
-                if (gp.ui.commandNum > 3) gp.ui.commandNum = 0;
+                if (gp.ui.commandNum > 4) gp.ui.commandNum = 0;
             }
             if (code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT) {
                 if (gp.ui.commandNum == 1) {
                     gp.numberOfPlayers--;
                     if (gp.numberOfPlayers < 2) gp.numberOfPlayers = 4;
+                }
+                if (gp.ui.commandNum == 2) {
+                    gp.currentMapIndex--;
+                    // ZMIANA: Skaczemy po liście załadowanych map
+                    if (gp.currentMapIndex < 0) gp.currentMapIndex = gp.mapNames.size() - 1;
                 }
             }
             if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) {
@@ -85,18 +89,22 @@ public class KeyHandler implements KeyListener {
                     gp.numberOfPlayers++;
                     if (gp.numberOfPlayers > 4) gp.numberOfPlayers = 2;
                 }
+                if (gp.ui.commandNum == 2) {
+                    gp.currentMapIndex++;
+                    // ZMIANA: Zabezpieczenie przed wyjściem za listę
+                    if (gp.currentMapIndex > gp.mapNames.size() - 1) gp.currentMapIndex = 0;
+                }
             }
             if (code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER) {
                 if (gp.ui.commandNum == 0) { gp.resetGame(); gp.currentState = GameState.PLAY; }
-                if (gp.ui.commandNum == 2) {
-                    gp.previousState = GameState.MENU; // Zapisujemy, że wchodzimy z Menu
+                if (gp.ui.commandNum == 3) {
+                    gp.previousState = GameState.MENU;
                     gp.ui.commandNum = 0;
                     gp.currentState = GameState.OPTIONS;
                 }
-                if (gp.ui.commandNum == 3) System.exit(0);
+                if (gp.ui.commandNum == 4) System.exit(0);
             }
         }
-        // NOWE: LOGIKA MENU PAUZY
         else if (gp.currentState == GameState.PAUSE) {
             if (code == KeyEvent.VK_W || code == KeyEvent.VK_UP) {
                 gp.ui.commandNum--;
@@ -107,16 +115,16 @@ public class KeyHandler implements KeyListener {
                 if (gp.ui.commandNum > 3) gp.ui.commandNum = 0;
             }
             if (code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER) {
-                if (gp.ui.commandNum == 0) gp.currentState = GameState.PLAY; // Wznów
-                if (gp.ui.commandNum == 1) { gp.resetGame(); gp.currentState = GameState.PLAY; } // Restart
+                if (gp.ui.commandNum == 0) gp.currentState = GameState.PLAY;
+                if (gp.ui.commandNum == 1) { gp.resetGame(); gp.currentState = GameState.PLAY; }
                 if (gp.ui.commandNum == 2) {
-                    gp.previousState = GameState.PAUSE; // Zapisujemy, że wchodzimy z Pauzy
+                    gp.previousState = GameState.PAUSE;
                     gp.ui.commandNum = 0;
                     gp.currentState = GameState.OPTIONS;
                 }
-                if (gp.ui.commandNum == 3) { gp.ui.commandNum = 0; gp.currentState = GameState.MENU; } // Wyjście do Menu
+                if (gp.ui.commandNum == 3) { gp.ui.commandNum = 0; gp.currentState = GameState.MENU; }
             }
-            if (code == KeyEvent.VK_ESCAPE) { gp.currentState = GameState.PLAY; } // Odrzucenie pauzy
+            if (code == KeyEvent.VK_ESCAPE) { gp.currentState = GameState.PLAY; }
         }
         else if (gp.currentState == GameState.LOGO) {
             if (code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER) gp.currentState = GameState.MENU;
@@ -125,10 +133,9 @@ public class KeyHandler implements KeyListener {
             if (code == KeyEvent.VK_ESCAPE) gp.currentState = GameState.MENU;
         }
         else if (gp.currentState == GameState.PLAY) {
-            // NOWE: Włączenie pauzy
             if (code == KeyEvent.VK_ESCAPE) {
                 gp.currentState = GameState.PAUSE;
-                gp.ui.commandNum = 0; // Ustawiamy kursor na pierwszej opcji
+                gp.ui.commandNum = 0;
             }
 
             if (code == p1.upCode) p1.up = true; if (code == p1.downCode) p1.down = true; if (code == p1.leftCode) p1.left = true; if (code == p1.rightCode) p1.right = true; if (code == p1.bombCode) p1.bomb = true;

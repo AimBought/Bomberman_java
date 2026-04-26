@@ -4,6 +4,9 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 public class GamePanel extends JPanel implements Runnable {
@@ -17,7 +20,6 @@ public class GamePanel extends JPanel implements Runnable {
 
     public final int screenWidth = tileSize * maxScreenCol;
     public final int screenHeight = tileSize * maxScreenRow;
-
     public final int hudHeight = tileSize * 2;
     public final int totalScreenHeight = screenHeight + hudHeight;
 
@@ -26,7 +28,6 @@ public class GamePanel extends JPanel implements Runnable {
     public int[][] map;
 
     public GameState currentState = GameState.LOGO;
-    // NOWE: Pamięta, skąd weszliśmy w opcje (Menu czy Pauza)
     public GameState previousState = GameState.MENU;
 
     public Config config = new Config();
@@ -39,6 +40,12 @@ public class GamePanel extends JPanel implements Runnable {
     public ArrayList<PowerUp> powerUps = new ArrayList<>();
 
     public int numberOfPlayers = 2;
+    public ArrayList<String> mapNames = new ArrayList<>();
+    public int currentMapIndex = 0;
+
+    // NOWE ZMIENNE DO ZARZĄDZANIA CZASEM I WYGRANĄ
+    public int playTimer = 0;
+    public int winnerId = -1;
     public int deathTimer = 300;
     public boolean roundEnded = false;
 
@@ -49,6 +56,35 @@ public class GamePanel extends JPanel implements Runnable {
         this.addKeyListener(keyH);
         this.setFocusable(true);
         config.loadConfig(keyH);
+
+        map = new int[maxScreenCol][maxScreenRow];
+        scanMapFolder();
+    }
+
+    private void scanMapFolder() {
+        try {
+            InputStream in = getClass().getResourceAsStream("/maps");
+            if(in == null) {
+                System.out.println("BŁĄD: Folder /maps nie istnieje w resources!");
+                return;
+            }
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(in));
+            String resource;
+
+            while ((resource = br.readLine()) != null) {
+                if(resource.endsWith(".txt")) {
+                    String cleanName = resource.substring(0, resource.length() - 4);
+                    mapNames.add(cleanName);
+                }
+            }
+            br.close();
+
+            if(mapNames.isEmpty()) mapNames.add("Brak Mapy");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void resetGame() {
@@ -56,43 +92,59 @@ public class GamePanel extends JPanel implements Runnable {
         bombs.clear();
         explosions.clear();
         powerUps.clear();
+
+        // Resetowanie liczników
+        playTimer = 0;
         deathTimer = 300;
         roundEnded = false;
+        winnerId = -1;
 
         players.add(new Player(this, keyH.p1, 1, Color.WHITE, 0, 0));
         players.add(new Player(this, keyH.p2, 2, new Color(50, 150, 255), maxScreenCol - 1, maxScreenRow - 1));
 
-        if (numberOfPlayers >= 3) {
-            players.add(new Player(this, keyH.p3, 3, Color.RED, maxScreenCol - 1, 0));
-        }
-        if (numberOfPlayers >= 4) {
-            players.add(new Player(this, keyH.p4, 4, Color.YELLOW, 0, maxScreenRow - 1));
-        }
+        if (numberOfPlayers >= 3) players.add(new Player(this, keyH.p3, 3, Color.RED, maxScreenCol - 1, 0));
+        if (numberOfPlayers >= 4) players.add(new Player(this, keyH.p4, 4, Color.YELLOW, 0, maxScreenRow - 1));
 
-        generateMap();
+        loadMap();
     }
 
-    public void generateMap() {
-        map = new int[maxScreenCol][maxScreenRow];
-        for (int x = 0; x < maxScreenCol; x++) {
-            for (int y = 0; y < maxScreenRow; y++) {
-                if (x % 2 != 0 && y % 2 != 0) {
-                    map[x][y] = 1;
-                }
-                else {
-                    boolean p1Safe = (x == 0 && y == 0) || (x == 1 && y == 0) || (x == 0 && y == 1);
-                    boolean p2Safe = (x == maxScreenCol-1 && y == maxScreenRow-1) || (x == maxScreenCol-2 && y == maxScreenRow-1) || (x == maxScreenCol-1 && y == maxScreenRow-2);
-                    boolean p3Safe = (x == maxScreenCol-1 && y == 0) || (x == maxScreenCol-2 && y == 0) || (x == maxScreenCol-1 && y == 1);
-                    boolean p4Safe = (x == 0 && y == maxScreenRow-1) || (x == 1 && y == maxScreenRow-1) || (x == 0 && y == maxScreenRow-2);
+    public void loadMap() {
+        if(mapNames.isEmpty() || mapNames.get(0).equals("Brak Mapy")) return;
 
-                    if (!p1Safe && !p2Safe && !p3Safe && !p4Safe) {
-                        if (Math.random() < 0.4) map[x][y] = 2;
-                        else map[x][y] = 0;
+        try {
+            String fileName = "/maps/" + mapNames.get(currentMapIndex) + ".txt";
+            InputStream is = getClass().getResourceAsStream(fileName);
+            BufferedReader br = new BufferedReader(new InputStreamReader(is));
+
+            for (int row = 0; row < maxScreenRow; row++) {
+                String line = br.readLine();
+                if(line == null) break;
+
+                for (int col = 0; col < maxScreenCol; col++) {
+                    if(col >= line.length()) break;
+
+                    char c = line.charAt(col);
+
+                    if (c == '#') {
+                        map[col][row] = 1;
                     } else {
-                        map[x][y] = 0;
+                        boolean p1Safe = (col == 0 && row == 0) || (col == 1 && row == 0) || (col == 0 && row == 1);
+                        boolean p2Safe = (col == maxScreenCol-1 && row == maxScreenRow-1) || (col == maxScreenCol-2 && row == maxScreenRow-1) || (col == maxScreenCol-1 && row == maxScreenRow-2);
+                        boolean p3Safe = (col == maxScreenCol-1 && row == 0) || (col == maxScreenCol-2 && row == 0) || (col == maxScreenCol-1 && row == 1);
+                        boolean p4Safe = (col == 0 && row == maxScreenRow-1) || (col == 1 && row == maxScreenRow-1) || (col == 0 && row == maxScreenRow-2);
+
+                        if (!p1Safe && !p2Safe && !p3Safe && !p4Safe) {
+                            if (Math.random() < 0.4) map[col][row] = 2;
+                            else map[col][row] = 0;
+                        } else {
+                            map[col][row] = 0;
+                        }
                     }
                 }
             }
+            br.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -121,17 +173,27 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void update() {
-        // Gra aktualizuje się TYLKO w stanie PLAY. Jeśli jest PAUSE, ignoruje ruch i odliczanie bomb!
         if (currentState == GameState.PLAY) {
 
+            // Zwiększamy czas gry, dopóki runda trwa
+            if (!roundEnded) {
+                playTimer++;
+            }
+
             int aliveCount = 0;
+            int lastAliveId = 0; // Śledzi ID ostatniego żyjącego gracza
 
             for (Player p : players) {
                 if (!p.isDead) {
                     p.update();
                     checkPowerUpCollection(p);
                     checkPlayerDeath(p);
-                    if (!p.isDead) aliveCount++;
+
+                    // Sprawdzamy stan po kolizjach
+                    if (!p.isDead) {
+                        aliveCount++;
+                        lastAliveId = p.id;
+                    }
                 }
             }
 
@@ -155,11 +217,20 @@ public class GamePanel extends JPanel implements Runnable {
                 }
             }
 
-            if (aliveCount <= 1) roundEnded = true;
+            // NOWA LOGIKA ZAKOŃCZENIA GRY
+            if (aliveCount <= 1 && !roundEnded) {
+                roundEnded = true;
+                // Jeśli został 1 gracz - wygrywa. Jeśli 0 - remis (ID = 0)
+                winnerId = (aliveCount == 1) ? lastAliveId : 0;
+            }
 
             if (roundEnded) {
                 deathTimer--;
-                if (deathTimer <= 0) currentState = GameState.SUMMARY;
+                if (deathTimer <= 0) {
+                    // Po odliczeniu wracamy do MENU, by szybko zagrać ponownie!
+                    currentState = GameState.MENU;
+                    ui.commandNum = 0;
+                }
             }
         }
     }
@@ -250,7 +321,6 @@ public class GamePanel extends JPanel implements Runnable {
         g2.setColor(Color.BLACK);
         g2.fillRect(0, 0, screenWidth, totalScreenHeight);
 
-        // ZMIANA: Rysujemy mapę zarówno gdy gramy, jak i gdy jesteśmy w menu PAUZY
         if (currentState == GameState.PLAY || currentState == GameState.PAUSE) {
             for (int x = 0; x < maxScreenCol; x++) {
                 for (int y = 0; y < maxScreenRow; y++) {
@@ -266,14 +336,13 @@ public class GamePanel extends JPanel implements Runnable {
                     }
                 }
             }
-
             for (PowerUp p : powerUps) p.draw(g2);
             for (Bomb b : bombs) b.draw(g2);
             for (Explosion e : explosions) e.draw(g2);
             for (Player p : players) p.draw(g2);
         }
 
-        ui.draw(g2); // UI narysuje na wierzchu półprzezroczysty ekran pauzy
+        ui.draw(g2);
         g2.dispose();
     }
 }
