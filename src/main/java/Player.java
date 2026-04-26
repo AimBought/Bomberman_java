@@ -8,47 +8,47 @@ public class Player {
     KeyHandler keyH;
 
     public int x, y;
-    public int speed;
+
+    // POPRAWKA: Wracamy do wizualnego rozmiaru 32x32 i marginesu 8px
+    int drawSize = 32;
+    int drawOffset = 8;
+
     public Rectangle solidArea;
 
-    int playerSize = 32;
-    int offset = 8;
-
     int bombCooldown = 0;
-
-    // NOWE: Status życia gracza
     public boolean isDead = false;
+
+    public int speed;
+    public int maxBombs;
+    public int bombPower;
 
     public Player(GamePanel gp, KeyHandler keyH) {
         this.gp = gp;
         this.keyH = keyH;
-
         setDefaultValues();
-        solidArea = new Rectangle(offset, offset, playerSize, playerSize);
+
+        // Hitbox kolizji zoptymalizowany pod płynne ślizganie się po zakrętach
+        solidArea = new Rectangle(10, 10, 28, 28);
     }
 
     public void setDefaultValues() {
         x = 0;
         y = 0;
         speed = 4;
+        maxBombs = 1;
+        bombPower = 1;
         bombCooldown = 0;
-        isDead = false; // Na starcie gracz zawsze żyje
+        isDead = false;
     }
 
     public void update() {
-        // NOWE: Jeśli gracz nie żyje, całkowicie blokujemy jego akcje
-        if (isDead) {
-            return;
-        }
+        if (isDead) return;
 
-        if (bombCooldown > 0) {
-            bombCooldown--;
-        }
+        if (bombCooldown > 0) bombCooldown--;
 
-        if (keyH.spacePressed && bombCooldown == 0 && gp.bombs.size() < 1) {
+        if (keyH.spacePressed && bombCooldown == 0 && gp.bombs.size() < maxBombs) {
             int centerCol = (x + gp.tileSize / 2) / gp.tileSize;
             int centerRow = (y + gp.tileSize / 2) / gp.tileSize;
-
             gp.bombs.add(new Bomb(gp, centerCol, centerRow));
             bombCooldown = 30;
         }
@@ -61,12 +61,8 @@ public class Player {
         if (keyH.leftPressed) nextX -= speed;
         if (keyH.rightPressed) nextX += speed;
 
-        if (!checkCollision(nextX, y)) {
-            x = nextX;
-        }
-        if (!checkCollision(x, nextY)) {
-            y = nextY;
-        }
+        if (!checkCollision(nextX, y)) x = nextX;
+        if (!checkCollision(x, nextY)) y = nextY;
     }
 
     private boolean checkCollision(int targetX, int targetY) {
@@ -93,13 +89,11 @@ public class Player {
     }
 
     public void draw(Graphics2D g2) {
-        // NOWE: Zmiana koloru po śmierci
         if (isDead) {
-            g2.setColor(Color.DARK_GRAY); // Spalony ludek
+            g2.setColor(Color.DARK_GRAY);
         } else {
-            g2.setColor(Color.WHITE);     // Żywy ludek
+            g2.setColor(Color.WHITE);
         }
-
-        g2.fillRect(x + offset, y + offset, playerSize, playerSize);
+        g2.fillRect(x + drawOffset, y + drawOffset, drawSize, drawSize);
     }
 }

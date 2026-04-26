@@ -1,7 +1,6 @@
 import javax.swing.JPanel;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -15,12 +14,15 @@ public class GamePanel extends JPanel implements Runnable {
 
     public final int maxScreenCol = 15;
     public final int maxScreenRow = 13;
-    final int screenWidth = tileSize * maxScreenCol;
-    final int screenHeight = tileSize * maxScreenRow;
+
+    public final int screenWidth = tileSize * maxScreenCol;
+    public final int screenHeight = tileSize * maxScreenRow;
+
+    public final int hudHeight = tileSize * 2;
+    public final int totalScreenHeight = screenHeight + hudHeight;
 
     int FPS = 60;
     Thread gameThread;
-
     public int[][] map;
 
     public GameState currentState = GameState.LOGO;
@@ -31,15 +33,14 @@ public class GamePanel extends JPanel implements Runnable {
 
     public ArrayList<Bomb> bombs = new ArrayList<>();
     public ArrayList<Explosion> explosions = new ArrayList<>();
+    public ArrayList<PowerUp> powerUps = new ArrayList<>();
 
-    // NOWE: Timer śmierci (5 sekund * 60 klatek)
     public int deathTimer = 300;
 
     public GamePanel() {
-        this.setPreferredSize(new Dimension(screenWidth, screenHeight));
+        this.setPreferredSize(new Dimension(screenWidth, totalScreenHeight));
         this.setBackground(Color.BLACK);
         this.setDoubleBuffered(true);
-
         this.addKeyListener(keyH);
         this.setFocusable(true);
 
@@ -51,7 +52,8 @@ public class GamePanel extends JPanel implements Runnable {
         player.setDefaultValues();
         bombs.clear();
         explosions.clear();
-        deathTimer = 300; // Resetujemy timer
+        powerUps.clear();
+        deathTimer = 300;
         generateMap();
     }
 
@@ -104,13 +106,11 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void update() {
         if (currentState == GameState.PLAY) {
-
-            // Gracz porusza się tylko, gdy żyje
             if (!player.isDead) {
                 player.update();
+                checkPowerUpCollection();
             }
 
-            // Bomby i wybuchy odświeżamy zawsze (żeby ogień dokończył animację nawet po naszej śmierci)
             for (int i = 0; i < bombs.size(); i++) {
                 Bomb b = bombs.get(i);
                 b.update();
@@ -130,7 +130,6 @@ public class GamePanel extends JPanel implements Runnable {
                 }
             }
 
-            // Sprawdzanie śmierci lub odliczanie do ekranu podsumowania
             if (!player.isDead) {
                 checkPlayerDeath();
             } else {
@@ -142,22 +141,28 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
+    public void checkPowerUpCollection() {
+        Rectangle playerRect = new Rectangle(player.x + player.solidArea.x, player.y + player.solidArea.y, player.solidArea.width, player.solidArea.height);
+        for (int i = 0; i < powerUps.size(); i++) {
+            PowerUp p = powerUps.get(i);
+            Rectangle pRect = new Rectangle(p.col * tileSize, p.row * tileSize, tileSize, tileSize);
+            if (playerRect.intersects(pRect)) {
+                if (p.type == 0) player.bombPower++;
+                else if (p.type == 1) player.maxBombs++;
+                else if (p.type == 2) {
+                    player.speed++;
+                    if (player.speed > 8) player.speed = 8;
+                }
+                powerUps.remove(i);
+                i--;
+            }
+        }
+    }
+
     public void checkPlayerDeath() {
-        Rectangle playerRect = new Rectangle(
-                player.x + player.solidArea.x,
-                player.y + player.solidArea.y,
-                player.solidArea.width,
-                player.solidArea.height
-        );
-
+        Rectangle playerRect = new Rectangle(player.x + player.solidArea.x, player.y + player.solidArea.y, player.solidArea.width, player.solidArea.height);
         for (Explosion e : explosions) {
-            Rectangle expRect = new Rectangle(
-                    e.col * tileSize,
-                    e.row * tileSize,
-                    tileSize,
-                    tileSize
-            );
-
+            Rectangle expRect = new Rectangle(e.col * tileSize, e.row * tileSize, tileSize, tileSize);
             if (playerRect.intersects(expRect)) {
                 player.isDead = true;
                 break;
@@ -168,7 +173,7 @@ public class GamePanel extends JPanel implements Runnable {
     public void explodeBomb(Bomb b) {
         int c = b.col;
         int r = b.row;
-        int power = 1;
+        int power = player.bombPower;
 
         explosions.add(new Explosion(this, c, r));
         int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
@@ -178,18 +183,26 @@ public class GamePanel extends JPanel implements Runnable {
                 int nextCol = c + dir[0] * i;
                 int nextRow = r + dir[1] * i;
 
-                if (nextCol < 0 || nextCol >= maxScreenCol || nextRow < 0 || nextRow >= maxScreenRow) {
-                    break;
+                if (nextCol < 0 || nextCol >= maxScreenCol || nextRow < 0 || nextRow >= maxScreenRow) break;
+
+                for (int j = 0; j < powerUps.size(); j++) {
+                    if (powerUps.get(j).col == nextCol && powerUps.get(j).row == nextRow) {
+                        powerUps.remove(j);
+                        j--;
+                    }
                 }
 
                 int tileType = map[nextCol][nextRow];
 
-                if (tileType == 1) {
-                    break;
-                }
+                if (tileType == 1) break;
                 else if (tileType == 2) {
                     map[nextCol][nextRow] = 0;
                     explosions.add(new Explosion(this, nextCol, nextRow));
+
+                    if (Math.random() < 0.30) {
+                        int type = (int)(Math.random() * 3);
+                        powerUps.add(new PowerUp(this, nextCol, nextRow, type));
+                    }
                     break;
                 }
                 else {
@@ -204,11 +217,20 @@ public class GamePanel extends JPanel implements Runnable {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
 
-        // NOWE: DYNAMICZNE SKALOWANIE EKRANU
-        // Zależnie od rozmiaru okna, rozciągamy całą zawartość gry
-        double scaleX = (double) getWidth() / screenWidth;
-        double scaleY = (double) getHeight() / screenHeight;
-        g2.scale(scaleX, scaleY);
+        double scaleRatio = Math.min((double) getWidth() / screenWidth, (double) getHeight() / totalScreenHeight);
+
+        int drawX = (int) ((getWidth() - (screenWidth * scaleRatio)) / 2);
+        int drawY = (int) ((getHeight() - (totalScreenHeight * scaleRatio)) / 2);
+
+        g2.translate(drawX, drawY);
+        g2.scale(scaleRatio, scaleRatio);
+
+        // Ustawiamy klip żeby nic się nie rysowało poza naszym kwadratem
+        g2.setClip(0, 0, screenWidth, totalScreenHeight);
+
+        // POPRAWKA: Rysujemy czarne tło wewnątrz obszaru gry na wypadek błędów skalowania
+        g2.setColor(Color.BLACK);
+        g2.fillRect(0, 0, screenWidth, totalScreenHeight);
 
         if (currentState == GameState.PLAY) {
 
@@ -227,24 +249,13 @@ public class GamePanel extends JPanel implements Runnable {
                 }
             }
 
+            for (PowerUp p : powerUps) p.draw(g2);
             for (Bomb b : bombs) b.draw(g2);
             for (Explosion e : explosions) e.draw(g2);
-
             player.draw(g2);
-
-            // NOWE: Rysowanie Timera Śmierci
-            if (player.isDead) {
-                g2.setColor(Color.WHITE);
-                g2.setFont(new Font("Arial", Font.BOLD, 24));
-                // Dzielimy przez 60, aby uzyskać sekundy i dodajemy 1, żeby licznik nie pokazywał zera
-                int secondsLeft = (deathTimer / 60) + 1;
-                g2.drawString("Koniec za: " + secondsLeft, 20, 40);
-            }
-
-        } else {
-            ui.draw(g2);
         }
 
+        ui.draw(g2);
         g2.dispose();
     }
 }

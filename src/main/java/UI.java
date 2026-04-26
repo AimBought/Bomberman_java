@@ -11,27 +11,59 @@ public class UI {
 
     public UI(GamePanel gp) {
         this.gp = gp;
-        // ZMIANA: Zmniejszono czcionkę z 60 na 48
         titleFont = new Font("Arial", Font.BOLD, 48);
         normalFont = new Font("Arial", Font.PLAIN, 28);
     }
 
     public void draw(Graphics2D g2) {
         switch (gp.currentState) {
-            case LOGO:
-                drawLogoScreen(g2);
-                break;
-            case MENU:
-                drawMenuScreen(g2);
-                break;
-            case OPTIONS:
-                drawOptionsScreen(g2);
-                break;
-            case SUMMARY:
-                drawSummaryScreen(g2);
-                break;
-            case PLAY:
-                break;
+            case LOGO: drawLogoScreen(g2); break;
+            case MENU: drawMenuScreen(g2); break;
+            case OPTIONS: drawOptionsScreen(g2); break;
+            case SUMMARY: drawSummaryScreen(g2); break;
+            case PLAY: drawPlayHUD(g2); break;
+        }
+    }
+
+    private void drawPlayHUD(Graphics2D g2) {
+        int yStart = gp.screenHeight;
+
+        // POPRAWKA: Rysujemy pasek o 1 piksel wyżej i o 2 wyższy, żeby zniwelować "szpary" ze skalowania
+        g2.setColor(Color.DARK_GRAY);
+        g2.fillRect(0, yStart - 1, gp.screenWidth, gp.hudHeight + 2);
+
+        g2.setColor(Color.WHITE);
+        g2.drawLine(0, yStart - 1, gp.screenWidth, yStart - 1);
+
+        g2.setFont(new Font("Arial", Font.BOLD, 24));
+
+        // POPRAWKA: Podniesiono teksty, by nie ucinało ich dno okna Windowsa
+        int textY = yStart + 45;
+        int boxY = yStart + 27;
+
+        g2.setColor(Color.MAGENTA);
+        g2.fillRect(50, boxY, 20, 20);
+        g2.setColor(Color.WHITE);
+        g2.drawString("Zasięg: " + gp.player.bombPower, 85, textY);
+
+        g2.setColor(Color.CYAN);
+        g2.fillRect(300, boxY, 20, 20);
+        g2.setColor(Color.WHITE);
+        g2.drawString("Bomby: " + gp.player.maxBombs, 335, textY);
+
+        g2.setColor(Color.GREEN);
+        g2.fillRect(550, boxY, 20, 20);
+        g2.setColor(Color.WHITE);
+        g2.drawString("Szybkość: " + gp.player.speed, 585, textY);
+
+        if (gp.player.isDead) {
+            g2.setColor(Color.WHITE);
+            g2.setFont(new Font("Arial", Font.BOLD, 40));
+            int secondsLeft = (gp.deathTimer / 60) + 1;
+            String text = "Koniec za: " + secondsLeft;
+            int x = gp.screenWidth / 2 - g2.getFontMetrics().stringWidth(text) / 2;
+            int y = gp.screenHeight / 2;
+            g2.drawString(text, x, y);
         }
     }
 
@@ -41,7 +73,7 @@ public class UI {
         String text = "STUDIO XYZ PREZENTUJE";
 
         int x = gp.screenWidth / 2 - g2.getFontMetrics().stringWidth(text) / 2;
-        int y = gp.screenHeight / 2;
+        int y = gp.totalScreenHeight / 2;
 
         g2.drawString(text, x, y);
 
@@ -90,12 +122,13 @@ public class UI {
         g2.setFont(titleFont);
         String text = "KONIEC RUNDY";
         int x = gp.screenWidth / 2 - g2.getFontMetrics().stringWidth(text) / 2;
-        g2.drawString(text, x, gp.screenHeight / 2);
+        int y = gp.totalScreenHeight / 2;
+        g2.drawString(text, x, y);
 
         g2.setColor(Color.WHITE);
         g2.setFont(normalFont);
         String subText = "Wciśnij ESC, aby wrócić do MENU";
         int subX = gp.screenWidth / 2 - g2.getFontMetrics().stringWidth(subText) / 2;
-        g2.drawString(subText, subX, gp.screenHeight / 2 + 50);
+        g2.drawString(subText, subX, y + 50);
     }
 }
