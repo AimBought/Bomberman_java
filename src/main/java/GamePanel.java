@@ -26,16 +26,21 @@ public class GamePanel extends JPanel implements Runnable {
     public int[][] map;
 
     public GameState currentState = GameState.LOGO;
+    // NOWE: Pamięta, skąd weszliśmy w opcje (Menu czy Pauza)
+    public GameState previousState = GameState.MENU;
+
+    public Config config = new Config();
+    public KeyHandler keyH = new KeyHandler(this);
     public UI ui = new UI(this);
 
-    public KeyHandler keyH = new KeyHandler(this);
-    public Player player = new Player(this, keyH);
-
+    public ArrayList<Player> players = new ArrayList<>();
     public ArrayList<Bomb> bombs = new ArrayList<>();
     public ArrayList<Explosion> explosions = new ArrayList<>();
     public ArrayList<PowerUp> powerUps = new ArrayList<>();
 
+    public int numberOfPlayers = 2;
     public int deathTimer = 300;
+    public boolean roundEnded = false;
 
     public GamePanel() {
         this.setPreferredSize(new Dimension(screenWidth, totalScreenHeight));
@@ -43,34 +48,46 @@ public class GamePanel extends JPanel implements Runnable {
         this.setDoubleBuffered(true);
         this.addKeyListener(keyH);
         this.setFocusable(true);
-
-        map = new int[maxScreenCol][maxScreenRow];
-        generateMap();
+        config.loadConfig(keyH);
     }
 
     public void resetGame() {
-        player.setDefaultValues();
+        players.clear();
         bombs.clear();
         explosions.clear();
         powerUps.clear();
         deathTimer = 300;
+        roundEnded = false;
+
+        players.add(new Player(this, keyH.p1, 1, Color.WHITE, 0, 0));
+        players.add(new Player(this, keyH.p2, 2, new Color(50, 150, 255), maxScreenCol - 1, maxScreenRow - 1));
+
+        if (numberOfPlayers >= 3) {
+            players.add(new Player(this, keyH.p3, 3, Color.RED, maxScreenCol - 1, 0));
+        }
+        if (numberOfPlayers >= 4) {
+            players.add(new Player(this, keyH.p4, 4, Color.YELLOW, 0, maxScreenRow - 1));
+        }
+
         generateMap();
     }
 
     public void generateMap() {
+        map = new int[maxScreenCol][maxScreenRow];
         for (int x = 0; x < maxScreenCol; x++) {
             for (int y = 0; y < maxScreenRow; y++) {
                 if (x % 2 != 0 && y % 2 != 0) {
                     map[x][y] = 1;
                 }
                 else {
-                    boolean isSafeZone = (x == 0 && y == 0) || (x == 1 && y == 0) || (x == 0 && y == 1);
-                    if (!isSafeZone) {
-                        if (Math.random() < 0.4) {
-                            map[x][y] = 2;
-                        } else {
-                            map[x][y] = 0;
-                        }
+                    boolean p1Safe = (x == 0 && y == 0) || (x == 1 && y == 0) || (x == 0 && y == 1);
+                    boolean p2Safe = (x == maxScreenCol-1 && y == maxScreenRow-1) || (x == maxScreenCol-2 && y == maxScreenRow-1) || (x == maxScreenCol-1 && y == maxScreenRow-2);
+                    boolean p3Safe = (x == maxScreenCol-1 && y == 0) || (x == maxScreenCol-2 && y == 0) || (x == maxScreenCol-1 && y == 1);
+                    boolean p4Safe = (x == 0 && y == maxScreenRow-1) || (x == 1 && y == maxScreenRow-1) || (x == 0 && y == maxScreenRow-2);
+
+                    if (!p1Safe && !p2Safe && !p3Safe && !p4Safe) {
+                        if (Math.random() < 0.4) map[x][y] = 2;
+                        else map[x][y] = 0;
                     } else {
                         map[x][y] = 0;
                     }
@@ -89,10 +106,9 @@ public class GamePanel extends JPanel implements Runnable {
         double drawInterval = 1000000000.0 / FPS;
         double delta = 0;
         long lastTime = System.nanoTime();
-        long currentTime;
 
         while (gameThread != null) {
-            currentTime = System.nanoTime();
+            long currentTime = System.nanoTime();
             delta += (currentTime - lastTime) / drawInterval;
             lastTime = currentTime;
 
@@ -105,10 +121,18 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void update() {
+        // Gra aktualizuje się TYLKO w stanie PLAY. Jeśli jest PAUSE, ignoruje ruch i odliczanie bomb!
         if (currentState == GameState.PLAY) {
-            if (!player.isDead) {
-                player.update();
-                checkPowerUpCollection();
+
+            int aliveCount = 0;
+
+            for (Player p : players) {
+                if (!p.isDead) {
+                    p.update();
+                    checkPowerUpCollection(p);
+                    checkPlayerDeath(p);
+                    if (!p.isDead) aliveCount++;
+                }
             }
 
             for (int i = 0; i < bombs.size(); i++) {
@@ -116,6 +140,7 @@ public class GamePanel extends JPanel implements Runnable {
                 b.update();
                 if (b.timer <= 0) {
                     explodeBomb(b);
+                    b.owner.bombsPlaced--;
                     bombs.remove(i);
                     i--;
                 }
@@ -130,28 +155,26 @@ public class GamePanel extends JPanel implements Runnable {
                 }
             }
 
-            if (!player.isDead) {
-                checkPlayerDeath();
-            } else {
+            if (aliveCount <= 1) roundEnded = true;
+
+            if (roundEnded) {
                 deathTimer--;
-                if (deathTimer <= 0) {
-                    currentState = GameState.SUMMARY;
-                }
+                if (deathTimer <= 0) currentState = GameState.SUMMARY;
             }
         }
     }
 
-    public void checkPowerUpCollection() {
-        Rectangle playerRect = new Rectangle(player.x + player.solidArea.x, player.y + player.solidArea.y, player.solidArea.width, player.solidArea.height);
+    public void checkPowerUpCollection(Player p) {
+        Rectangle playerRect = new Rectangle(p.x + p.solidArea.x, p.y + p.solidArea.y, p.solidArea.width, p.solidArea.height);
         for (int i = 0; i < powerUps.size(); i++) {
-            PowerUp p = powerUps.get(i);
-            Rectangle pRect = new Rectangle(p.col * tileSize, p.row * tileSize, tileSize, tileSize);
-            if (playerRect.intersects(pRect)) {
-                if (p.type == 0) player.bombPower++;
-                else if (p.type == 1) player.maxBombs++;
-                else if (p.type == 2) {
-                    player.speed++;
-                    if (player.speed > 8) player.speed = 8;
+            PowerUp pu = powerUps.get(i);
+            Rectangle puRect = new Rectangle(pu.col * tileSize, pu.row * tileSize, tileSize, tileSize);
+            if (playerRect.intersects(puRect)) {
+                if (pu.type == 0) p.bombPower++;
+                else if (pu.type == 1) p.maxBombs++;
+                else if (pu.type == 2) {
+                    p.speed++;
+                    if (p.speed > 8) p.speed = 8;
                 }
                 powerUps.remove(i);
                 i--;
@@ -159,12 +182,12 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
-    public void checkPlayerDeath() {
-        Rectangle playerRect = new Rectangle(player.x + player.solidArea.x, player.y + player.solidArea.y, player.solidArea.width, player.solidArea.height);
+    public void checkPlayerDeath(Player p) {
+        Rectangle playerRect = new Rectangle(p.x + p.solidArea.x, p.y + p.solidArea.y, p.solidArea.width, p.solidArea.height);
         for (Explosion e : explosions) {
             Rectangle expRect = new Rectangle(e.col * tileSize, e.row * tileSize, tileSize, tileSize);
             if (playerRect.intersects(expRect)) {
-                player.isDead = true;
+                p.isDead = true;
                 break;
             }
         }
@@ -173,7 +196,7 @@ public class GamePanel extends JPanel implements Runnable {
     public void explodeBomb(Bomb b) {
         int c = b.col;
         int r = b.row;
-        int power = player.bombPower;
+        int power = b.owner.bombPower;
 
         explosions.add(new Explosion(this, c, r));
         int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
@@ -198,7 +221,6 @@ public class GamePanel extends JPanel implements Runnable {
                 else if (tileType == 2) {
                     map[nextCol][nextRow] = 0;
                     explosions.add(new Explosion(this, nextCol, nextRow));
-
                     if (Math.random() < 0.30) {
                         int type = (int)(Math.random() * 3);
                         powerUps.add(new PowerUp(this, nextCol, nextRow, type));
@@ -218,22 +240,18 @@ public class GamePanel extends JPanel implements Runnable {
         Graphics2D g2 = (Graphics2D) g;
 
         double scaleRatio = Math.min((double) getWidth() / screenWidth, (double) getHeight() / totalScreenHeight);
-
         int drawX = (int) ((getWidth() - (screenWidth * scaleRatio)) / 2);
         int drawY = (int) ((getHeight() - (totalScreenHeight * scaleRatio)) / 2);
 
         g2.translate(drawX, drawY);
         g2.scale(scaleRatio, scaleRatio);
-
-        // Ustawiamy klip żeby nic się nie rysowało poza naszym kwadratem
         g2.setClip(0, 0, screenWidth, totalScreenHeight);
 
-        // POPRAWKA: Rysujemy czarne tło wewnątrz obszaru gry na wypadek błędów skalowania
         g2.setColor(Color.BLACK);
         g2.fillRect(0, 0, screenWidth, totalScreenHeight);
 
-        if (currentState == GameState.PLAY) {
-
+        // ZMIANA: Rysujemy mapę zarówno gdy gramy, jak i gdy jesteśmy w menu PAUZY
+        if (currentState == GameState.PLAY || currentState == GameState.PAUSE) {
             for (int x = 0; x < maxScreenCol; x++) {
                 for (int y = 0; y < maxScreenRow; y++) {
                     int screenX = x * tileSize;
@@ -252,10 +270,10 @@ public class GamePanel extends JPanel implements Runnable {
             for (PowerUp p : powerUps) p.draw(g2);
             for (Bomb b : bombs) b.draw(g2);
             for (Explosion e : explosions) e.draw(g2);
-            player.draw(g2);
+            for (Player p : players) p.draw(g2);
         }
 
-        ui.draw(g2);
+        ui.draw(g2); // UI narysuje na wierzchu półprzezroczysty ekran pauzy
         g2.dispose();
     }
 }

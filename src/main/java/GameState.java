@@ -3,5 +3,6 @@ public enum GameState {
     MENU,
     OPTIONS,
     PLAY,
-    SUMMARY // Podsumowanie rundy / Game Over
+    PAUSE,    // NOWE: Stan pauzy
+    SUMMARY
 }
