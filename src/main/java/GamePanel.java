@@ -17,7 +17,6 @@ public class GamePanel extends JPanel implements Runnable {
 
     public final int maxScreenCol = 15;
     public final int maxScreenRow = 13;
-
     public final int screenWidth = tileSize * maxScreenCol;
     public final int screenHeight = tileSize * maxScreenRow;
     public final int hudHeight = tileSize * 2;
@@ -43,7 +42,8 @@ public class GamePanel extends JPanel implements Runnable {
     public ArrayList<String> mapNames = new ArrayList<>();
     public int currentMapIndex = 0;
 
-    // NOWE ZMIENNE DO ZARZĄDZANIA CZASEM I WYGRANĄ
+    public int gameMode = 1;
+
     public int playTimer = 0;
     public int winnerId = -1;
     public int deathTimer = 300;
@@ -64,27 +64,17 @@ public class GamePanel extends JPanel implements Runnable {
     private void scanMapFolder() {
         try {
             InputStream in = getClass().getResourceAsStream("/maps");
-            if(in == null) {
-                System.out.println("BŁĄD: Folder /maps nie istnieje w resources!");
-                return;
-            }
-
+            if(in == null) return;
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
             String resource;
-
             while ((resource = br.readLine()) != null) {
                 if(resource.endsWith(".txt")) {
-                    String cleanName = resource.substring(0, resource.length() - 4);
-                    mapNames.add(cleanName);
+                    mapNames.add(resource.substring(0, resource.length() - 4));
                 }
             }
             br.close();
-
             if(mapNames.isEmpty()) mapNames.add("Brak Mapy");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
     public void resetGame() {
@@ -93,7 +83,6 @@ public class GamePanel extends JPanel implements Runnable {
         explosions.clear();
         powerUps.clear();
 
-        // Resetowanie liczników
         playTimer = 0;
         deathTimer = 300;
         roundEnded = false;
@@ -101,7 +90,6 @@ public class GamePanel extends JPanel implements Runnable {
 
         players.add(new Player(this, keyH.p1, 1, Color.WHITE, 0, 0));
         players.add(new Player(this, keyH.p2, 2, new Color(50, 150, 255), maxScreenCol - 1, maxScreenRow - 1));
-
         if (numberOfPlayers >= 3) players.add(new Player(this, keyH.p3, 3, Color.RED, maxScreenCol - 1, 0));
         if (numberOfPlayers >= 4) players.add(new Player(this, keyH.p4, 4, Color.YELLOW, 0, maxScreenRow - 1));
 
@@ -110,7 +98,6 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void loadMap() {
         if(mapNames.isEmpty() || mapNames.get(0).equals("Brak Mapy")) return;
-
         try {
             String fileName = "/maps/" + mapNames.get(currentMapIndex) + ".txt";
             InputStream is = getClass().getResourceAsStream(fileName);
@@ -119,33 +106,22 @@ public class GamePanel extends JPanel implements Runnable {
             for (int row = 0; row < maxScreenRow; row++) {
                 String line = br.readLine();
                 if(line == null) break;
-
                 for (int col = 0; col < maxScreenCol; col++) {
                     if(col >= line.length()) break;
-
                     char c = line.charAt(col);
-
                     if (c == '#') {
                         map[col][row] = 1;
                     } else {
-                        boolean p1Safe = (col == 0 && row == 0) || (col == 1 && row == 0) || (col == 0 && row == 1);
-                        boolean p2Safe = (col == maxScreenCol-1 && row == maxScreenRow-1) || (col == maxScreenCol-2 && row == maxScreenRow-1) || (col == maxScreenCol-1 && row == maxScreenRow-2);
-                        boolean p3Safe = (col == maxScreenCol-1 && row == 0) || (col == maxScreenCol-2 && row == 0) || (col == maxScreenCol-1 && row == 1);
-                        boolean p4Safe = (col == 0 && row == maxScreenRow-1) || (col == 1 && row == maxScreenRow-1) || (col == 0 && row == maxScreenRow-2);
-
-                        if (!p1Safe && !p2Safe && !p3Safe && !p4Safe) {
+                        boolean safe = (col<=1&&row==0)||(col==0&&row==1) || (col>=maxScreenCol-2&&row==maxScreenRow-1)||(col==maxScreenCol-1&&row==maxScreenRow-2) || (col>=maxScreenCol-2&&row==0)||(col==maxScreenCol-1&&row==1) || (col<=1&&row==maxScreenRow-1)||(col==0&&row==maxScreenRow-2);
+                        if (!safe) {
                             if (Math.random() < 0.4) map[col][row] = 2;
                             else map[col][row] = 0;
-                        } else {
-                            map[col][row] = 0;
-                        }
+                        } else map[col][row] = 0;
                     }
                 }
             }
             br.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
     public void startGameThread() {
@@ -174,63 +150,39 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void update() {
         if (currentState == GameState.PLAY) {
-
-            // Zwiększamy czas gry, dopóki runda trwa
-            if (!roundEnded) {
-                playTimer++;
-            }
+            if (!roundEnded) playTimer++;
 
             int aliveCount = 0;
-            int lastAliveId = 0; // Śledzi ID ostatniego żyjącego gracza
+            int lastAliveId = 0;
 
             for (Player p : players) {
                 if (!p.isDead) {
                     p.update();
                     checkPowerUpCollection(p);
                     checkPlayerDeath(p);
-
-                    // Sprawdzamy stan po kolizjach
-                    if (!p.isDead) {
-                        aliveCount++;
-                        lastAliveId = p.id;
-                    }
+                    if (!p.isDead) { aliveCount++; lastAliveId = p.id; }
                 }
             }
 
             for (int i = 0; i < bombs.size(); i++) {
                 Bomb b = bombs.get(i);
                 b.update();
-                if (b.timer <= 0) {
-                    explodeBomb(b);
-                    b.owner.bombsPlaced--;
-                    bombs.remove(i);
-                    i--;
-                }
+                if (b.timer <= 0) { explodeBomb(b); b.owner.bombsPlaced--; bombs.remove(i); i--; }
             }
-
             for (int i = 0; i < explosions.size(); i++) {
                 Explosion e = explosions.get(i);
                 e.update();
-                if (e.timer <= 0) {
-                    explosions.remove(i);
-                    i--;
-                }
+                if (e.timer <= 0) { explosions.remove(i); i--; }
             }
 
-            // NOWA LOGIKA ZAKOŃCZENIA GRY
             if (aliveCount <= 1 && !roundEnded) {
                 roundEnded = true;
-                // Jeśli został 1 gracz - wygrywa. Jeśli 0 - remis (ID = 0)
                 winnerId = (aliveCount == 1) ? lastAliveId : 0;
             }
 
             if (roundEnded) {
                 deathTimer--;
-                if (deathTimer <= 0) {
-                    // Po odliczeniu wracamy do MENU, by szybko zagrać ponownie!
-                    currentState = GameState.MENU;
-                    ui.commandNum = 0;
-                }
+                if (deathTimer <= 0) { currentState = GameState.MENU; ui.commandNum = 0; }
             }
         }
     }
@@ -241,12 +193,14 @@ public class GamePanel extends JPanel implements Runnable {
             PowerUp pu = powerUps.get(i);
             Rectangle puRect = new Rectangle(pu.col * tileSize, pu.row * tileSize, tileSize, tileSize);
             if (playerRect.intersects(puRect)) {
+
                 if (pu.type == 0) p.bombPower++;
                 else if (pu.type == 1) p.maxBombs++;
-                else if (pu.type == 2) {
-                    p.speed++;
-                    if (p.speed > 8) p.speed = 8;
-                }
+                else if (pu.type == 2) { p.speed++; if (p.speed > 8) p.speed = 8; }
+                else if (pu.type >= 3 && pu.type <= 5) { p.activeCurse = pu.type; p.curseTimer = 600; }
+                // ZMIANA: Zwiększamy ilość pancerzy!
+                else if (pu.type == 6) { p.armorCount++; }
+
                 powerUps.remove(i);
                 i--;
             }
@@ -254,11 +208,20 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void checkPlayerDeath(Player p) {
+        if (p.invincibleTimer > 0) return;
+
         Rectangle playerRect = new Rectangle(p.x + p.solidArea.x, p.y + p.solidArea.y, p.solidArea.width, p.solidArea.height);
         for (Explosion e : explosions) {
             Rectangle expRect = new Rectangle(e.col * tileSize, e.row * tileSize, tileSize, tileSize);
             if (playerRect.intersects(expRect)) {
-                p.isDead = true;
+
+                // ZMIANA: Jeśli pancerzy jest > 0, to go zbijamy
+                if (p.armorCount > 0) {
+                    p.armorCount--;
+                    p.invincibleTimer = 60;
+                } else {
+                    p.isDead = true;
+                }
                 break;
             }
         }
@@ -292,8 +255,14 @@ public class GamePanel extends JPanel implements Runnable {
                 else if (tileType == 2) {
                     map[nextCol][nextRow] = 0;
                     explosions.add(new Explosion(this, nextCol, nextRow));
-                    if (Math.random() < 0.30) {
-                        int type = (int)(Math.random() * 3);
+
+                    if (gameMode == 1 && Math.random() < 0.35) {
+                        double rand = Math.random();
+                        int type;
+                        if (rand < 0.5) type = (int)(Math.random() * 3);
+                        else if (rand < 0.8) type = 3 + (int)(Math.random() * 3);
+                        else type = 6;
+
                         powerUps.add(new PowerUp(this, nextCol, nextRow, type));
                     }
                     break;

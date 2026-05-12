@@ -5,7 +5,7 @@ import java.awt.Rectangle;
 public class Player {
 
     GamePanel gp;
-    KeyHandler.PlayerInput input; // Unikalne wejście z klawiatury dla tego gracza
+    KeyHandler.PlayerInput input;
 
     public int id;
     public Color color;
@@ -22,15 +22,21 @@ public class Player {
     public int speed;
     public int maxBombs;
     public int bombPower;
-    public int bombsPlaced = 0; // Śledzi ilość obecnie postawionych bomb
+    public int bombsPlaced = 0;
+
+    // ZMIANA: Pancerz się stakuje!
+    public int armorCount = 0;
+    public int invincibleTimer = 0;
+
+    public int curseTimer = 0;
+    public int activeCurse = -1;
+    public int lastDir = 2;
 
     public Player(GamePanel gp, KeyHandler.PlayerInput input, int id, Color color, int startCol, int startRow) {
         this.gp = gp;
         this.input = input;
         this.id = id;
         this.color = color;
-
-        // Obliczamy piksele na podstawie kolumn i rzędów
         this.x = startCol * gp.tileSize;
         this.y = startRow * gp.tileSize;
 
@@ -45,18 +51,43 @@ public class Player {
         bombCooldown = 0;
         bombsPlaced = 0;
         isDead = false;
+        armorCount = 0; // Reset pancerza
+        invincibleTimer = 0;
+        curseTimer = 0;
+        activeCurse = -1;
     }
 
     public void update() {
         if (isDead) return;
 
         if (bombCooldown > 0) bombCooldown--;
+        if (invincibleTimer > 0) invincibleTimer--;
 
-        if (input.bomb && bombCooldown == 0 && bombsPlaced < maxBombs) {
+        if (curseTimer > 0) curseTimer--;
+        else activeCurse = -1;
+
+        boolean up = input.up;
+        boolean down = input.down;
+        boolean left = input.left;
+        boolean right = input.right;
+        boolean bomb = input.bomb;
+
+        if (activeCurse == 3) {
+            up = input.down; down = input.up; left = input.right; right = input.left;
+        }
+        else if (activeCurse == 4) {
+            if (up) lastDir = 1; else if (down) lastDir = 2; else if (left) lastDir = 3; else if (right) lastDir = 4;
+            else {
+                if (lastDir == 1) up = true; if (lastDir == 2) down = true; if (lastDir == 3) left = true; if (lastDir == 4) right = true;
+            }
+        }
+        else if (activeCurse == 5) {
+            bomb = false;
+        }
+
+        if (bomb && bombCooldown == 0 && bombsPlaced < maxBombs) {
             int centerCol = (x + gp.tileSize / 2) / gp.tileSize;
             int centerRow = (y + gp.tileSize / 2) / gp.tileSize;
-
-            // Przekazujemy referencję do gracza, żeby bomba wiedziała do kogo należy
             gp.bombs.add(new Bomb(gp, centerCol, centerRow, this));
             bombsPlaced++;
             bombCooldown = 30;
@@ -65,10 +96,10 @@ public class Player {
         int nextX = x;
         int nextY = y;
 
-        if (input.up) nextY -= speed;
-        if (input.down) nextY += speed;
-        if (input.left) nextX -= speed;
-        if (input.right) nextX += speed;
+        if (up) nextY -= speed;
+        if (down) nextY += speed;
+        if (left) nextX -= speed;
+        if (right) nextX += speed;
 
         if (!checkCollision(nextX, y)) x = nextX;
         if (!checkCollision(x, nextY)) y = nextY;
@@ -94,9 +125,23 @@ public class Player {
     public void draw(Graphics2D g2) {
         if (isDead) {
             g2.setColor(Color.DARK_GRAY);
+        } else if (invincibleTimer > 0 && invincibleTimer % 10 < 5) {
+            g2.setColor(Color.WHITE);
         } else {
-            g2.setColor(color); // Rysowanie wybranym kolorem (Biały lub Niebieski)
+            g2.setColor(color);
         }
+
         g2.fillRect(x + drawOffset, y + drawOffset, drawSize, drawSize);
+
+        // ZMIANA: Rysowanie pancerza
+        if (armorCount > 0 && !isDead) {
+            g2.setColor(Color.LIGHT_GRAY);
+            // Podniesiony o 4 piksele, żeby ładnie opadał na "głowę" kwadratu
+            g2.fillArc(x + drawOffset, y + drawOffset - 4, drawSize, drawSize, 0, 180);
+
+            // Ciemna obwódka dodaje efektu "hełmu"
+            g2.setColor(Color.DARK_GRAY);
+            g2.drawArc(x + drawOffset, y + drawOffset - 4, drawSize, drawSize, 0, 180);
+        }
     }
 }

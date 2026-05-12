@@ -22,7 +22,6 @@ public class UI {
             case LOGO: drawLogoScreen(g2); break;
             case MENU: drawMenuScreen(g2); break;
             case OPTIONS: drawOptionsScreen(g2); break;
-            case SUMMARY: drawSummaryScreen(g2); break; // Zostawione w razie czego, ale już tam nie wchodzimy
             case PLAY:
             case PAUSE:
                 drawPlayHUD(g2);
@@ -34,7 +33,6 @@ public class UI {
     private void drawPlayHUD(Graphics2D g2) {
         int yStart = gp.screenHeight;
 
-        // Rysowanie paska HUD
         g2.setColor(Color.DARK_GRAY);
         g2.fillRect(0, yStart - 1, gp.screenWidth, gp.hudHeight + 2);
         g2.setColor(Color.WHITE);
@@ -49,10 +47,33 @@ public class UI {
 
             if (i > 0) g2.drawLine(startX, yStart, startX, gp.totalScreenHeight);
 
+            // Tytuł
             g2.setFont(smallFont);
             g2.setColor(p.color);
-            g2.drawString("P" + p.id + (p.isDead ? " (MARTWY)" : ""), startX + 10, yStart + 25);
+            String title = "P" + p.id;
 
+            // ZMIANA: Obsługa tekstów
+            if (p.isDead) {
+                title += " (MARTWY)";
+            } else if (p.activeCurse != -1) {
+                // Dodajemy dynamiczny stoper klątwy!
+                int secondsLeft = (p.curseTimer / 60) + 1;
+                title += " (KLĄTWA: " + secondsLeft + "s)";
+            }
+            g2.drawString(title, startX + 10, yStart + 25);
+
+            // ZMIANA: Rysowanie ikonek zbroi zamiast napisu
+            if (p.armorCount > 0 && !p.isDead) {
+                int armorX = startX + 15 + g2.getFontMetrics().stringWidth(title);
+                for (int j = 0; j < p.armorCount; j++) {
+                    g2.setColor(Color.LIGHT_GRAY);
+                    g2.fillArc(armorX + (j * 15), yStart + 12, 12, 14, 0, 180);
+                    g2.setColor(Color.DARK_GRAY);
+                    g2.drawArc(armorX + (j * 15), yStart + 12, 12, 14, 0, 180);
+                }
+            }
+
+            // Statystyki
             g2.setFont(tinyFont);
             g2.setColor(Color.WHITE);
             g2.drawString("Zasięg: " + p.bombPower, startX + 10, yStart + 45);
@@ -60,7 +81,6 @@ public class UI {
             g2.drawString("Szybkość: " + p.speed, startX + 10, yStart + 85);
         }
 
-        // NOWE: TIMER GRY na samej górze ekranu (małe estetyczne pudełko)
         g2.setColor(new Color(0, 0, 0, 150));
         g2.fillRect(gp.screenWidth / 2 - 50, 0, 100, 30);
         g2.setColor(Color.WHITE);
@@ -68,8 +88,6 @@ public class UI {
 
         g2.setFont(smallFont);
         String timeText;
-
-        // Zależnie od tego, czy gra trwa, formatujemy czas w górę lub odliczamy 5 sekund w dół
         if (!gp.roundEnded) {
             int seconds = (gp.playTimer / 60) % 60;
             int minutes = (gp.playTimer / 60) / 60;
@@ -82,8 +100,6 @@ public class UI {
         int timeX = gp.screenWidth / 2 - g2.getFontMetrics().stringWidth(timeText) / 2;
         g2.drawString(timeText, timeX, 22);
 
-
-        // NOWE: NAPIS KTO WYGRAŁ NA ŚRODKU MAPY
         if (gp.roundEnded && gp.currentState != GameState.PAUSE) {
             g2.setFont(titleFont);
             String winnerText;
@@ -94,20 +110,14 @@ public class UI {
                 textColor = Color.LIGHT_GRAY;
             } else {
                 winnerText = "WYGRYWA P" + gp.winnerId + "!";
-                // Szukamy koloru zwycięzcy
-                for (Player p : gp.players) {
-                    if (p.id == gp.winnerId) textColor = p.color;
-                }
+                for (Player p : gp.players) if (p.id == gp.winnerId) textColor = p.color;
             }
 
             int x = gp.screenWidth / 2 - g2.getFontMetrics().stringWidth(winnerText) / 2;
             int y = gp.screenHeight / 2;
 
-            // Rysowanie cienia (lekko przesuniętego), by tekst nie zlał się z tłem gry
             g2.setColor(Color.BLACK);
             g2.drawString(winnerText, x + 4, y + 4);
-
-            // Rysowanie właściwego tekstu w kolorze zwycięzcy
             g2.setColor(textColor);
             g2.drawString(winnerText, x, y);
         }
@@ -166,7 +176,6 @@ public class UI {
         for (int i = 0; i < options.length; i++) {
             int col = i / 5;
             int row = i % 5;
-
             int xPos = 40 + (col * 160);
             int yPos = 120 + (row * 40);
 
@@ -229,24 +238,20 @@ public class UI {
         g2.drawString(opt2, opt2X, 330);
         if (commandNum == 2) g2.drawString(">", opt2X - 30, 330);
 
-        String opt3 = "Opcje";
+        String modeName = (gp.gameMode == 0) ? "Klasyczny" : "Ulepszenia";
+        String opt3 = "< Tryb: " + modeName + " >";
         int opt3X = gp.screenWidth / 2 - g2.getFontMetrics().stringWidth(opt3) / 2;
         g2.drawString(opt3, opt3X, 380);
         if (commandNum == 3) g2.drawString(">", opt3X - 30, 380);
 
-        String opt4 = "Wyjście";
+        String opt4 = "Opcje";
         int opt4X = gp.screenWidth / 2 - g2.getFontMetrics().stringWidth(opt4) / 2;
         g2.drawString(opt4, opt4X, 430);
         if (commandNum == 4) g2.drawString(">", opt4X - 30, 430);
-    }
 
-    // Metoda przestarzała, ale zostawiona awaryjnie w kodzie
-    private void drawSummaryScreen(Graphics2D g2) {
-        g2.setColor(Color.RED);
-        g2.setFont(titleFont);
-        String text = "KONIEC RUNDY";
-        int x = gp.screenWidth / 2 - g2.getFontMetrics().stringWidth(text) / 2;
-        int y = gp.totalScreenHeight / 2;
-        g2.drawString(text, x, y);
+        String opt5 = "Wyjście";
+        int opt5X = gp.screenWidth / 2 - g2.getFontMetrics().stringWidth(opt5) / 2;
+        g2.drawString(opt5, opt5X, 480);
+        if (commandNum == 5) g2.drawString(">", opt5X - 30, 480);
     }
 }

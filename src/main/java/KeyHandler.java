@@ -53,7 +53,7 @@ public class KeyHandler implements KeyListener {
             if (code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER) {
                 if (gp.ui.commandNum == 20) {
                     gp.currentState = gp.previousState;
-                    gp.ui.commandNum = (gp.previousState == GameState.MENU) ? 3 : 2;
+                    gp.ui.commandNum = (gp.previousState == GameState.MENU) ? 4 : 2;
                 } else {
                     waitingForKey = true;
                     keyToRebind = gp.ui.commandNum;
@@ -61,17 +61,17 @@ public class KeyHandler implements KeyListener {
             }
             if (code == KeyEvent.VK_ESCAPE) {
                 gp.currentState = gp.previousState;
-                gp.ui.commandNum = (gp.previousState == GameState.MENU) ? 3 : 2;
+                gp.ui.commandNum = (gp.previousState == GameState.MENU) ? 4 : 2;
             }
         }
         else if (gp.currentState == GameState.MENU) {
             if (code == KeyEvent.VK_W || code == KeyEvent.VK_UP) {
                 gp.ui.commandNum--;
-                if (gp.ui.commandNum < 0) gp.ui.commandNum = 4;
+                if (gp.ui.commandNum < 0) gp.ui.commandNum = 5; // ZMIANA: 6 opcji w menu (0-5)
             }
             if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) {
                 gp.ui.commandNum++;
-                if (gp.ui.commandNum > 4) gp.ui.commandNum = 0;
+                if (gp.ui.commandNum > 5) gp.ui.commandNum = 0;
             }
             if (code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT) {
                 if (gp.ui.commandNum == 1) {
@@ -80,8 +80,10 @@ public class KeyHandler implements KeyListener {
                 }
                 if (gp.ui.commandNum == 2) {
                     gp.currentMapIndex--;
-                    // ZMIANA: Skaczemy po liście załadowanych map
                     if (gp.currentMapIndex < 0) gp.currentMapIndex = gp.mapNames.size() - 1;
+                }
+                if (gp.ui.commandNum == 3) { // ZMIANA: Wybór Trybu Gry
+                    gp.gameMode = (gp.gameMode == 0) ? 1 : 0;
                 }
             }
             if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) {
@@ -91,18 +93,20 @@ public class KeyHandler implements KeyListener {
                 }
                 if (gp.ui.commandNum == 2) {
                     gp.currentMapIndex++;
-                    // ZMIANA: Zabezpieczenie przed wyjściem za listę
                     if (gp.currentMapIndex > gp.mapNames.size() - 1) gp.currentMapIndex = 0;
+                }
+                if (gp.ui.commandNum == 3) { // ZMIANA: Wybór Trybu Gry
+                    gp.gameMode = (gp.gameMode == 0) ? 1 : 0;
                 }
             }
             if (code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER) {
                 if (gp.ui.commandNum == 0) { gp.resetGame(); gp.currentState = GameState.PLAY; }
-                if (gp.ui.commandNum == 3) {
+                if (gp.ui.commandNum == 4) {
                     gp.previousState = GameState.MENU;
                     gp.ui.commandNum = 0;
                     gp.currentState = GameState.OPTIONS;
                 }
-                if (gp.ui.commandNum == 4) System.exit(0);
+                if (gp.ui.commandNum == 5) System.exit(0);
             }
         }
         else if (gp.currentState == GameState.PAUSE) {
@@ -128,9 +132,6 @@ public class KeyHandler implements KeyListener {
         }
         else if (gp.currentState == GameState.LOGO) {
             if (code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER) gp.currentState = GameState.MENU;
-        }
-        else if (gp.currentState == GameState.SUMMARY) {
-            if (code == KeyEvent.VK_ESCAPE) gp.currentState = GameState.MENU;
         }
         else if (gp.currentState == GameState.PLAY) {
             if (code == KeyEvent.VK_ESCAPE) {
