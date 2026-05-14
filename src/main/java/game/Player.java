@@ -1,3 +1,5 @@
+package game;
+
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -24,7 +26,6 @@ public class Player {
     public int bombPower;
     public int bombsPlaced = 0;
 
-    // ZMIANA: Pancerz się stakuje!
     public int armorCount = 0;
     public int invincibleTimer = 0;
 
@@ -37,8 +38,8 @@ public class Player {
         this.input = input;
         this.id = id;
         this.color = color;
-        this.x = startCol * gp.tileSize;
-        this.y = startRow * gp.tileSize;
+        this.x = startCol * GamePanel.TILE_SIZE;
+        this.y = startRow * GamePanel.TILE_SIZE;
 
         setDefaultValues();
         solidArea = new Rectangle(10, 10, 28, 28);
@@ -51,7 +52,7 @@ public class Player {
         bombCooldown = 0;
         bombsPlaced = 0;
         isDead = false;
-        armorCount = 0; // Reset pancerza
+        armorCount = 0;
         invincibleTimer = 0;
         curseTimer = 0;
         activeCurse = -1;
@@ -86,9 +87,10 @@ public class Player {
         }
 
         if (bomb && bombCooldown == 0 && bombsPlaced < maxBombs) {
-            int centerCol = (x + gp.tileSize / 2) / gp.tileSize;
-            int centerRow = (y + gp.tileSize / 2) / gp.tileSize;
-            gp.bombs.add(new Bomb(gp, centerCol, centerRow, this));
+            int centerCol = (x + GamePanel.TILE_SIZE / 2) / GamePanel.TILE_SIZE;
+            int centerRow = (y + GamePanel.TILE_SIZE / 2) / GamePanel.TILE_SIZE;
+            // ZMIANA: Bomba nie potrzebuje już gp w parametrze
+            gp.bombs.add(new Bomb(centerCol, centerRow, this));
             bombsPlaced++;
             bombCooldown = 30;
         }
@@ -111,12 +113,12 @@ public class Player {
         int topY = targetY + solidArea.y;
         int bottomY = targetY + solidArea.y + solidArea.height;
 
-        if (leftX < 0 || rightX > gp.screenWidth || topY < 0 || bottomY > gp.screenHeight) return true;
+        if (leftX < 0 || rightX > GamePanel.SCREEN_WIDTH || topY < 0 || bottomY > GamePanel.SCREEN_HEIGHT) return true;
 
-        int leftCol = leftX / gp.tileSize;
-        int rightCol = (rightX - 1) / gp.tileSize;
-        int topRow = topY / gp.tileSize;
-        int bottomRow = (bottomY - 1) / gp.tileSize;
+        int leftCol = leftX / GamePanel.TILE_SIZE;
+        int rightCol = (rightX - 1) / GamePanel.TILE_SIZE;
+        int topRow = topY / GamePanel.TILE_SIZE;
+        int bottomRow = (bottomY - 1) / GamePanel.TILE_SIZE;
 
         return (gp.map[leftCol][topRow] != 0 || gp.map[rightCol][topRow] != 0 ||
                 gp.map[leftCol][bottomRow] != 0 || gp.map[rightCol][bottomRow] != 0);
@@ -133,13 +135,9 @@ public class Player {
 
         g2.fillRect(x + drawOffset, y + drawOffset, drawSize, drawSize);
 
-        // ZMIANA: Rysowanie pancerza
         if (armorCount > 0 && !isDead) {
             g2.setColor(Color.LIGHT_GRAY);
-            // Podniesiony o 4 piksele, żeby ładnie opadał na "głowę" kwadratu
             g2.fillArc(x + drawOffset, y + drawOffset - 4, drawSize, drawSize, 0, 180);
-
-            // Ciemna obwódka dodaje efektu "hełmu"
             g2.setColor(Color.DARK_GRAY);
             g2.drawArc(x + drawOffset, y + drawOffset - 4, drawSize, drawSize, 0, 180);
         }

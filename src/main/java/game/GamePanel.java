@@ -1,3 +1,5 @@
+package game;
+
 import javax.swing.JPanel;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -11,16 +13,19 @@ import java.util.ArrayList;
 
 public class GamePanel extends JPanel implements Runnable {
 
-    final int originalTileSize = 16;
-    final int scale = 3;
-    public final int tileSize = originalTileSize * scale;
+    // --- ZMIANA: STAŁE SYSTEMOWE ---
+    public static final int ORIGINAL_TILE_SIZE = 16;
+    public static final int SCALE = 3;
+    public static final int TILE_SIZE = ORIGINAL_TILE_SIZE * SCALE;
 
-    public final int maxScreenCol = 15;
-    public final int maxScreenRow = 13;
-    public final int screenWidth = tileSize * maxScreenCol;
-    public final int screenHeight = tileSize * maxScreenRow;
-    public final int hudHeight = tileSize * 2;
-    public final int totalScreenHeight = screenHeight + hudHeight;
+    public static final int MAX_SCREEN_COL = 15;
+    public static final int MAX_SCREEN_ROW = 13;
+
+    public static final int SCREEN_WIDTH = TILE_SIZE * MAX_SCREEN_COL;
+    public static final int SCREEN_HEIGHT = TILE_SIZE * MAX_SCREEN_ROW;
+    public static final int HUD_HEIGHT = TILE_SIZE * 2;
+    public static final int TOTAL_SCREEN_HEIGHT = SCREEN_HEIGHT + HUD_HEIGHT;
+    // -------------------------------
 
     int FPS = 60;
     Thread gameThread;
@@ -41,7 +46,6 @@ public class GamePanel extends JPanel implements Runnable {
     public int numberOfPlayers = 2;
     public ArrayList<String> mapNames = new ArrayList<>();
     public int currentMapIndex = 0;
-
     public int gameMode = 1;
 
     public int playTimer = 0;
@@ -50,14 +54,14 @@ public class GamePanel extends JPanel implements Runnable {
     public boolean roundEnded = false;
 
     public GamePanel() {
-        this.setPreferredSize(new Dimension(screenWidth, totalScreenHeight));
+        this.setPreferredSize(new Dimension(SCREEN_WIDTH, TOTAL_SCREEN_HEIGHT));
         this.setBackground(Color.BLACK);
         this.setDoubleBuffered(true);
         this.addKeyListener(keyH);
         this.setFocusable(true);
         config.loadConfig(keyH);
 
-        map = new int[maxScreenCol][maxScreenRow];
+        map = new int[MAX_SCREEN_COL][MAX_SCREEN_ROW];
         scanMapFolder();
     }
 
@@ -89,9 +93,9 @@ public class GamePanel extends JPanel implements Runnable {
         winnerId = -1;
 
         players.add(new Player(this, keyH.p1, 1, Color.WHITE, 0, 0));
-        players.add(new Player(this, keyH.p2, 2, new Color(50, 150, 255), maxScreenCol - 1, maxScreenRow - 1));
-        if (numberOfPlayers >= 3) players.add(new Player(this, keyH.p3, 3, Color.RED, maxScreenCol - 1, 0));
-        if (numberOfPlayers >= 4) players.add(new Player(this, keyH.p4, 4, Color.YELLOW, 0, maxScreenRow - 1));
+        players.add(new Player(this, keyH.p2, 2, new Color(50, 150, 255), MAX_SCREEN_COL - 1, MAX_SCREEN_ROW - 1));
+        if (numberOfPlayers >= 3) players.add(new Player(this, keyH.p3, 3, Color.RED, MAX_SCREEN_COL - 1, 0));
+        if (numberOfPlayers >= 4) players.add(new Player(this, keyH.p4, 4, Color.YELLOW, 0, MAX_SCREEN_ROW - 1));
 
         loadMap();
     }
@@ -103,16 +107,16 @@ public class GamePanel extends JPanel implements Runnable {
             InputStream is = getClass().getResourceAsStream(fileName);
             BufferedReader br = new BufferedReader(new InputStreamReader(is));
 
-            for (int row = 0; row < maxScreenRow; row++) {
+            for (int row = 0; row < MAX_SCREEN_ROW; row++) {
                 String line = br.readLine();
                 if(line == null) break;
-                for (int col = 0; col < maxScreenCol; col++) {
+                for (int col = 0; col < MAX_SCREEN_COL; col++) {
                     if(col >= line.length()) break;
                     char c = line.charAt(col);
                     if (c == '#') {
                         map[col][row] = 1;
                     } else {
-                        boolean safe = (col<=1&&row==0)||(col==0&&row==1) || (col>=maxScreenCol-2&&row==maxScreenRow-1)||(col==maxScreenCol-1&&row==maxScreenRow-2) || (col>=maxScreenCol-2&&row==0)||(col==maxScreenCol-1&&row==1) || (col<=1&&row==maxScreenRow-1)||(col==0&&row==maxScreenRow-2);
+                        boolean safe = (col<=1&&row==0)||(col==0&&row==1) || (col>=MAX_SCREEN_COL-2&&row==MAX_SCREEN_ROW-1)||(col==MAX_SCREEN_COL-1&&row==MAX_SCREEN_ROW-2) || (col>=MAX_SCREEN_COL-2&&row==0)||(col==MAX_SCREEN_COL-1&&row==1) || (col<=1&&row==MAX_SCREEN_ROW-1)||(col==0&&row==MAX_SCREEN_ROW-2);
                         if (!safe) {
                             if (Math.random() < 0.4) map[col][row] = 2;
                             else map[col][row] = 0;
@@ -191,14 +195,13 @@ public class GamePanel extends JPanel implements Runnable {
         Rectangle playerRect = new Rectangle(p.x + p.solidArea.x, p.y + p.solidArea.y, p.solidArea.width, p.solidArea.height);
         for (int i = 0; i < powerUps.size(); i++) {
             PowerUp pu = powerUps.get(i);
-            Rectangle puRect = new Rectangle(pu.col * tileSize, pu.row * tileSize, tileSize, tileSize);
+            Rectangle puRect = new Rectangle(pu.col * TILE_SIZE, pu.row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             if (playerRect.intersects(puRect)) {
 
                 if (pu.type == 0) p.bombPower++;
                 else if (pu.type == 1) p.maxBombs++;
                 else if (pu.type == 2) { p.speed++; if (p.speed > 8) p.speed = 8; }
                 else if (pu.type >= 3 && pu.type <= 5) { p.activeCurse = pu.type; p.curseTimer = 600; }
-                // ZMIANA: Zwiększamy ilość pancerzy!
                 else if (pu.type == 6) { p.armorCount++; }
 
                 powerUps.remove(i);
@@ -212,10 +215,8 @@ public class GamePanel extends JPanel implements Runnable {
 
         Rectangle playerRect = new Rectangle(p.x + p.solidArea.x, p.y + p.solidArea.y, p.solidArea.width, p.solidArea.height);
         for (Explosion e : explosions) {
-            Rectangle expRect = new Rectangle(e.col * tileSize, e.row * tileSize, tileSize, tileSize);
+            Rectangle expRect = new Rectangle(e.col * TILE_SIZE, e.row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             if (playerRect.intersects(expRect)) {
-
-                // ZMIANA: Jeśli pancerzy jest > 0, to go zbijamy
                 if (p.armorCount > 0) {
                     p.armorCount--;
                     p.invincibleTimer = 60;
@@ -232,7 +233,8 @@ public class GamePanel extends JPanel implements Runnable {
         int r = b.row;
         int power = b.owner.bombPower;
 
-        explosions.add(new Explosion(this, c, r));
+        // ZMIANA: Konstruktory nie wymagają już `this`
+        explosions.add(new Explosion(c, r));
         int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
 
         for (int[] dir : directions) {
@@ -240,7 +242,7 @@ public class GamePanel extends JPanel implements Runnable {
                 int nextCol = c + dir[0] * i;
                 int nextRow = r + dir[1] * i;
 
-                if (nextCol < 0 || nextCol >= maxScreenCol || nextRow < 0 || nextRow >= maxScreenRow) break;
+                if (nextCol < 0 || nextCol >= MAX_SCREEN_COL || nextRow < 0 || nextRow >= MAX_SCREEN_ROW) break;
 
                 for (int j = 0; j < powerUps.size(); j++) {
                     if (powerUps.get(j).col == nextCol && powerUps.get(j).row == nextRow) {
@@ -254,7 +256,7 @@ public class GamePanel extends JPanel implements Runnable {
                 if (tileType == 1) break;
                 else if (tileType == 2) {
                     map[nextCol][nextRow] = 0;
-                    explosions.add(new Explosion(this, nextCol, nextRow));
+                    explosions.add(new Explosion(nextCol, nextRow));
 
                     if (gameMode == 1 && Math.random() < 0.35) {
                         double rand = Math.random();
@@ -263,12 +265,12 @@ public class GamePanel extends JPanel implements Runnable {
                         else if (rand < 0.8) type = 3 + (int)(Math.random() * 3);
                         else type = 6;
 
-                        powerUps.add(new PowerUp(this, nextCol, nextRow, type));
+                        powerUps.add(new PowerUp(nextCol, nextRow, type));
                     }
                     break;
                 }
                 else {
-                    explosions.add(new Explosion(this, nextCol, nextRow));
+                    explosions.add(new Explosion(nextCol, nextRow));
                 }
             }
         }
@@ -279,29 +281,29 @@ public class GamePanel extends JPanel implements Runnable {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
 
-        double scaleRatio = Math.min((double) getWidth() / screenWidth, (double) getHeight() / totalScreenHeight);
-        int drawX = (int) ((getWidth() - (screenWidth * scaleRatio)) / 2);
-        int drawY = (int) ((getHeight() - (totalScreenHeight * scaleRatio)) / 2);
+        double scaleRatio = Math.min((double) getWidth() / SCREEN_WIDTH, (double) getHeight() / TOTAL_SCREEN_HEIGHT);
+        int drawX = (int) ((getWidth() - (SCREEN_WIDTH * scaleRatio)) / 2);
+        int drawY = (int) ((getHeight() - (TOTAL_SCREEN_HEIGHT * scaleRatio)) / 2);
 
         g2.translate(drawX, drawY);
         g2.scale(scaleRatio, scaleRatio);
-        g2.setClip(0, 0, screenWidth, totalScreenHeight);
+        g2.setClip(0, 0, SCREEN_WIDTH, TOTAL_SCREEN_HEIGHT);
 
         g2.setColor(Color.BLACK);
-        g2.fillRect(0, 0, screenWidth, totalScreenHeight);
+        g2.fillRect(0, 0, SCREEN_WIDTH, TOTAL_SCREEN_HEIGHT);
 
         if (currentState == GameState.PLAY || currentState == GameState.PAUSE) {
-            for (int x = 0; x < maxScreenCol; x++) {
-                for (int y = 0; y < maxScreenRow; y++) {
-                    int screenX = x * tileSize;
-                    int screenY = y * tileSize;
+            for (int x = 0; x < MAX_SCREEN_COL; x++) {
+                for (int y = 0; y < MAX_SCREEN_ROW; y++) {
+                    int screenX = x * TILE_SIZE;
+                    int screenY = y * TILE_SIZE;
 
                     if (map[x][y] == 1) {
                         g2.setColor(Color.GRAY);
-                        g2.fillRect(screenX, screenY, tileSize, tileSize);
+                        g2.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
                     } else if (map[x][y] == 2) {
                         g2.setColor(new Color(139, 69, 19));
-                        g2.fillRect(screenX, screenY, tileSize, tileSize);
+                        g2.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
                     }
                 }
             }

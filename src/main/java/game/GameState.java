@@ -1,3 +1,5 @@
+package game;
+
 public enum GameState {
     LOGO,
     MENU,
