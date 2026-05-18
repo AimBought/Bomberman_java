@@ -33,7 +33,6 @@ public class UI {
     }
 
     private void drawPlayHUD(Graphics2D g2) {
-        // ZMIANA: Używamy stałych statycznych z GamePanel
         int yStart = GamePanel.SCREEN_HEIGHT;
 
         g2.setColor(Color.DARK_GRAY);
@@ -97,6 +96,18 @@ public class UI {
 
         int timeX = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(timeText) / 2;
         g2.drawString(timeText, timeX, 22);
+
+        // NOWE: Timer ostrzegający przed Burzą (Tylko w trybie Battle Royale)
+        if (gp.gameMode == 2 && !gp.roundEnded) {
+            int stormSecondsLeft = 10 - (gp.stormTimer / 60);
+            String stormText = "Burza za: " + stormSecondsLeft + "s";
+
+            // Fioletowe ostrzeżenie pod głównym timerem
+            g2.setColor(new Color(255, 100, 255));
+            g2.setFont(tinyFont);
+            int stX = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(stormText) / 2;
+            g2.drawString(stormText, stX, 45);
+        }
 
         if (gp.roundEnded && gp.currentState != GameState.PAUSE) {
             g2.setFont(titleFont);
@@ -236,7 +247,11 @@ public class UI {
         g2.drawString(opt2, opt2X, 330);
         if (commandNum == 2) g2.drawString(">", opt2X - 30, 330);
 
-        String modeName = (gp.gameMode == 0) ? "Klasyczny" : "Ulepszenia";
+        // ZMIANA: Obsługa trzech nazw trybów w opcji Menu
+        String modeName = "Klasyczny";
+        if (gp.gameMode == 1) modeName = "Ulepszenia";
+        if (gp.gameMode == 2) modeName = "Battle Royale";
+
         String opt3 = "< Tryb: " + modeName + " >";
         int opt3X = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(opt3) / 2;
         g2.drawString(opt3, opt3X, 380);

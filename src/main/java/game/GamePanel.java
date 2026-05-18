@@ -13,7 +13,6 @@ import java.util.ArrayList;
 
 public class GamePanel extends JPanel implements Runnable {
 
-    // --- ZMIANA: STAŁE SYSTEMOWE ---
     public static final int ORIGINAL_TILE_SIZE = 16;
     public static final int SCALE = 3;
     public static final int TILE_SIZE = ORIGINAL_TILE_SIZE * SCALE;
@@ -25,7 +24,6 @@ public class GamePanel extends JPanel implements Runnable {
     public static final int SCREEN_HEIGHT = TILE_SIZE * MAX_SCREEN_ROW;
     public static final int HUD_HEIGHT = TILE_SIZE * 2;
     public static final int TOTAL_SCREEN_HEIGHT = SCREEN_HEIGHT + HUD_HEIGHT;
-    // -------------------------------
 
     int FPS = 60;
     Thread gameThread;
@@ -46,7 +44,13 @@ public class GamePanel extends JPanel implements Runnable {
     public int numberOfPlayers = 2;
     public ArrayList<String> mapNames = new ArrayList<>();
     public int currentMapIndex = 0;
+
+    // 0 = Klasyczny, 1 = Ulepszenia, 2 = Battle Royale
     public int gameMode = 1;
+
+    // NOWE: Mechanika Burzy
+    public int stormPhase = 0; // Ile kafelków od brzegu pożarła burza
+    public int stormTimer = 0;
 
     public int playTimer = 0;
     public int winnerId = -1;
@@ -91,6 +95,8 @@ public class GamePanel extends JPanel implements Runnable {
         deathTimer = 300;
         roundEnded = false;
         winnerId = -1;
+        stormPhase = 0;
+        stormTimer = 0;
 
         players.add(new Player(this, keyH.p1, 1, Color.WHITE, 0, 0));
         players.add(new Player(this, keyH.p2, 2, new Color(50, 150, 255), MAX_SCREEN_COL - 1, MAX_SCREEN_ROW - 1));
@@ -154,7 +160,18 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void update() {
         if (currentState == GameState.PLAY) {
-            if (!roundEnded) playTimer++;
+            if (!roundEnded) {
+                playTimer++;
+
+                // NOWE: Logika powiększającej się Burzy (co 10 sekund / 600 klatek)
+                if (gameMode == 2) {
+                    stormTimer++;
+                    if (stormTimer >= 600) {
+                        stormPhase++;
+                        stormTimer = 0;
+                    }
+                }
+            }
 
             int aliveCount = 0;
             int lastAliveId = 0;
@@ -211,6 +228,18 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void checkPlayerDeath(Player p) {
+        // NOWE: Sprawdzanie śmierci od Burzy (ignoryje zbroję!)
+        if (gameMode == 2 && !p.isDead) {
+            int pCol = (p.x + p.solidArea.x + p.solidArea.width / 2) / TILE_SIZE;
+            int pRow = (p.y + p.solidArea.y + p.solidArea.height / 2) / TILE_SIZE;
+
+            if (pCol < stormPhase || pCol >= MAX_SCREEN_COL - stormPhase ||
+                    pRow < stormPhase || pRow >= MAX_SCREEN_ROW - stormPhase) {
+                p.isDead = true;
+                return; // Burza zabija natychmiast, wychodzimy
+            }
+        }
+
         if (p.invincibleTimer > 0) return;
 
         Rectangle playerRect = new Rectangle(p.x + p.solidArea.x, p.y + p.solidArea.y, p.solidArea.width, p.solidArea.height);
@@ -233,7 +262,6 @@ public class GamePanel extends JPanel implements Runnable {
         int r = b.row;
         int power = b.owner.bombPower;
 
-        // ZMIANA: Konstruktory nie wymagają już `this`
         explosions.add(new Explosion(c, r));
         int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
 
@@ -258,7 +286,8 @@ public class GamePanel extends JPanel implements Runnable {
                     map[nextCol][nextRow] = 0;
                     explosions.add(new Explosion(nextCol, nextRow));
 
-                    if (gameMode == 1 && Math.random() < 0.35) {
+                    // Boxy wyrzucają loot w trybie 1 oraz w trybie 2!
+                    if ((gameMode == 1 || gameMode == 2) && Math.random() < 0.35) {
                         double rand = Math.random();
                         int type;
                         if (rand < 0.5) type = (int)(Math.random() * 3);
@@ -293,6 +322,7 @@ public class GamePanel extends JPanel implements Runnable {
         g2.fillRect(0, 0, SCREEN_WIDTH, TOTAL_SCREEN_HEIGHT);
 
         if (currentState == GameState.PLAY || currentState == GameState.PAUSE) {
+            // Rysowanie mapy
             for (int x = 0; x < MAX_SCREEN_COL; x++) {
                 for (int y = 0; y < MAX_SCREEN_ROW; y++) {
                     int screenX = x * TILE_SIZE;
@@ -311,6 +341,19 @@ public class GamePanel extends JPanel implements Runnable {
             for (Bomb b : bombs) b.draw(g2);
             for (Explosion e : explosions) e.draw(g2);
             for (Player p : players) p.draw(g2);
+
+            // NOWE: Rysowanie na wierzchu półprzezroczystej burzy
+            if (gameMode == 2 && stormPhase > 0) {
+                g2.setColor(new Color(128, 0, 128, 150)); // Fioletowy, półprzezroczysty
+                for (int x = 0; x < MAX_SCREEN_COL; x++) {
+                    for (int y = 0; y < MAX_SCREEN_ROW; y++) {
+                        if (x < stormPhase || x >= MAX_SCREEN_COL - stormPhase ||
+                                y < stormPhase || y >= MAX_SCREEN_ROW - stormPhase) {
+                            g2.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        }
+                    }
+                }
+            }
         }
 
         ui.draw(g2);

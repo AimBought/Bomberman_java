@@ -69,7 +69,7 @@ public class KeyHandler implements KeyListener {
         else if (gp.currentState == GameState.MENU) {
             if (code == KeyEvent.VK_W || code == KeyEvent.VK_UP) {
                 gp.ui.commandNum--;
-                if (gp.ui.commandNum < 0) gp.ui.commandNum = 5; // ZMIANA: 6 opcji w menu (0-5)
+                if (gp.ui.commandNum < 0) gp.ui.commandNum = 5;
             }
             if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) {
                 gp.ui.commandNum++;
@@ -84,8 +84,10 @@ public class KeyHandler implements KeyListener {
                     gp.currentMapIndex--;
                     if (gp.currentMapIndex < 0) gp.currentMapIndex = gp.mapNames.size() - 1;
                 }
-                if (gp.ui.commandNum == 3) { // ZMIANA: Wybór Trybu Gry
-                    gp.gameMode = (gp.gameMode == 0) ? 1 : 0;
+                if (gp.ui.commandNum == 3) {
+                    // ZMIANA: Mamy 3 tryby gry
+                    gp.gameMode--;
+                    if (gp.gameMode < 0) gp.gameMode = 2;
                 }
             }
             if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) {
@@ -97,8 +99,9 @@ public class KeyHandler implements KeyListener {
                     gp.currentMapIndex++;
                     if (gp.currentMapIndex > gp.mapNames.size() - 1) gp.currentMapIndex = 0;
                 }
-                if (gp.ui.commandNum == 3) { // ZMIANA: Wybór Trybu Gry
-                    gp.gameMode = (gp.gameMode == 0) ? 1 : 0;
+                if (gp.ui.commandNum == 3) {
+                    gp.gameMode++;
+                    if (gp.gameMode > 2) gp.gameMode = 0;
                 }
             }
             if (code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER) {
