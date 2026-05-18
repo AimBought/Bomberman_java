@@ -85,9 +85,9 @@ public class KeyHandler implements KeyListener {
                     if (gp.currentMapIndex < 0) gp.currentMapIndex = gp.mapNames.size() - 1;
                 }
                 if (gp.ui.commandNum == 3) {
-                    // ZMIANA: Mamy 3 tryby gry
+                    // ZMIANA: Skaczemy po 4 trybach (0-3)
                     gp.gameMode--;
-                    if (gp.gameMode < 0) gp.gameMode = 2;
+                    if (gp.gameMode < 0) gp.gameMode = 3;
                 }
             }
             if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) {
@@ -101,7 +101,7 @@ public class KeyHandler implements KeyListener {
                 }
                 if (gp.ui.commandNum == 3) {
                     gp.gameMode++;
-                    if (gp.gameMode > 2) gp.gameMode = 0;
+                    if (gp.gameMode > 3) gp.gameMode = 0;
                 }
             }
             if (code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER) {

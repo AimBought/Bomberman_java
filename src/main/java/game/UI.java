@@ -53,6 +53,17 @@ public class UI {
             g2.setColor(p.color);
             String title = "P" + p.id;
 
+            // NOWE: Dynamiczne sumowanie punktów zamalowanych kafelków
+            if (gp.gameMode == 3) {
+                int score = 0;
+                for(int x = 0; x < GamePanel.MAX_SCREEN_COL; x++) {
+                    for(int y = 0; y < GamePanel.MAX_SCREEN_ROW; y++) {
+                        if(gp.paintedMap[x][y] == p.id) score++;
+                    }
+                }
+                title += " (" + score + " PKT)";
+            }
+
             if (p.isDead) {
                 title += " (MARTWY)";
             } else if (p.activeCurse != -1) {
@@ -86,8 +97,10 @@ public class UI {
         g2.setFont(smallFont);
         String timeText;
         if (!gp.roundEnded) {
-            int seconds = (gp.playTimer / 60) % 60;
-            int minutes = (gp.playTimer / 60) / 60;
+            // ZMIANA: W trybie Paint czas odlicza do 0, w innych rośnie do góry
+            int t = (gp.gameMode == 3) ? gp.paintTimeLeft : gp.playTimer;
+            int seconds = (t / 60) % 60;
+            int minutes = (t / 60) / 60;
             timeText = String.format("%02d:%02d", minutes, seconds);
         } else {
             int secondsLeft = (gp.deathTimer / 60) + 1;
@@ -97,12 +110,9 @@ public class UI {
         int timeX = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(timeText) / 2;
         g2.drawString(timeText, timeX, 22);
 
-        // NOWE: Timer ostrzegający przed Burzą (Tylko w trybie Battle Royale)
         if (gp.gameMode == 2 && !gp.roundEnded) {
             int stormSecondsLeft = 10 - (gp.stormTimer / 60);
             String stormText = "Burza za: " + stormSecondsLeft + "s";
-
-            // Fioletowe ostrzeżenie pod głównym timerem
             g2.setColor(new Color(255, 100, 255));
             g2.setFont(tinyFont);
             int stX = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(stormText) / 2;
@@ -247,10 +257,10 @@ public class UI {
         g2.drawString(opt2, opt2X, 330);
         if (commandNum == 2) g2.drawString(">", opt2X - 30, 330);
 
-        // ZMIANA: Obsługa trzech nazw trybów w opcji Menu
         String modeName = "Klasyczny";
         if (gp.gameMode == 1) modeName = "Ulepszenia";
         if (gp.gameMode == 2) modeName = "Battle Royale";
+        if (gp.gameMode == 3) modeName = "Paint"; // ZMIANA
 
         String opt3 = "< Tryb: " + modeName + " >";
         int opt3X = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(opt3) / 2;

@@ -45,12 +45,13 @@ public class GamePanel extends JPanel implements Runnable {
     public ArrayList<String> mapNames = new ArrayList<>();
     public int currentMapIndex = 0;
 
-    // 0 = Klasyczny, 1 = Ulepszenia, 2 = Battle Royale
     public int gameMode = 1;
 
-    // NOWE: Mechanika Burzy
-    public int stormPhase = 0; // Ile kafelków od brzegu pożarła burza
+    public int stormPhase = 0;
     public int stormTimer = 0;
+
+    public int[][] paintedMap;
+    public int paintTimeLeft = 3600;
 
     public int playTimer = 0;
     public int winnerId = -1;
@@ -76,9 +77,7 @@ public class GamePanel extends JPanel implements Runnable {
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
             String resource;
             while ((resource = br.readLine()) != null) {
-                if(resource.endsWith(".txt")) {
-                    mapNames.add(resource.substring(0, resource.length() - 4));
-                }
+                if(resource.endsWith(".txt")) mapNames.add(resource.substring(0, resource.length() - 4));
             }
             br.close();
             if(mapNames.isEmpty()) mapNames.add("Brak Mapy");
@@ -98,6 +97,9 @@ public class GamePanel extends JPanel implements Runnable {
         stormPhase = 0;
         stormTimer = 0;
 
+        paintedMap = new int[MAX_SCREEN_COL][MAX_SCREEN_ROW];
+        paintTimeLeft = 3600;
+
         players.add(new Player(this, keyH.p1, 1, Color.WHITE, 0, 0));
         players.add(new Player(this, keyH.p2, 2, new Color(50, 150, 255), MAX_SCREEN_COL - 1, MAX_SCREEN_ROW - 1));
         if (numberOfPlayers >= 3) players.add(new Player(this, keyH.p3, 3, Color.RED, MAX_SCREEN_COL - 1, 0));
@@ -107,6 +109,15 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void loadMap() {
+        if (gameMode == 3) {
+            for (int r = 0; r < MAX_SCREEN_ROW; r++) {
+                for (int c = 0; c < MAX_SCREEN_COL; c++) {
+                    map[c][r] = 0;
+                }
+            }
+            return;
+        }
+
         if(mapNames.isEmpty() || mapNames.get(0).equals("Brak Mapy")) return;
         try {
             String fileName = "/maps/" + mapNames.get(currentMapIndex) + ".txt";
@@ -119,9 +130,8 @@ public class GamePanel extends JPanel implements Runnable {
                 for (int col = 0; col < MAX_SCREEN_COL; col++) {
                     if(col >= line.length()) break;
                     char c = line.charAt(col);
-                    if (c == '#') {
-                        map[col][row] = 1;
-                    } else {
+                    if (c == '#') map[col][row] = 1;
+                    else {
                         boolean safe = (col<=1&&row==0)||(col==0&&row==1) || (col>=MAX_SCREEN_COL-2&&row==MAX_SCREEN_ROW-1)||(col==MAX_SCREEN_COL-1&&row==MAX_SCREEN_ROW-2) || (col>=MAX_SCREEN_COL-2&&row==0)||(col==MAX_SCREEN_COL-1&&row==1) || (col<=1&&row==MAX_SCREEN_ROW-1)||(col==0&&row==MAX_SCREEN_ROW-2);
                         if (!safe) {
                             if (Math.random() < 0.4) map[col][row] = 2;
@@ -163,12 +173,25 @@ public class GamePanel extends JPanel implements Runnable {
             if (!roundEnded) {
                 playTimer++;
 
-                // NOWE: Logika powiększającej się Burzy (co 10 sekund / 600 klatek)
                 if (gameMode == 2) {
                     stormTimer++;
-                    if (stormTimer >= 600) {
-                        stormPhase++;
-                        stormTimer = 0;
+                    if (stormTimer >= 600) { stormPhase++; stormTimer = 0; }
+                }
+
+                if (gameMode == 3) {
+                    paintTimeLeft--;
+
+                    if (playTimer % 180 == 0) {
+                        int rCol = (int)(Math.random() * MAX_SCREEN_COL);
+                        int rRow = (int)(Math.random() * MAX_SCREEN_ROW);
+
+                        double rand = Math.random();
+                        int type;
+                        if (rand < 0.5) type = (int)(Math.random() * 3);
+                        else if (rand < 0.8) type = 3 + (int)(Math.random() * 3);
+                        else type = 6;
+
+                        powerUps.add(new PowerUp(rCol, rRow, type));
                     }
                 }
             }
@@ -196,9 +219,18 @@ public class GamePanel extends JPanel implements Runnable {
                 if (e.timer <= 0) { explosions.remove(i); i--; }
             }
 
-            if (aliveCount <= 1 && !roundEnded) {
-                roundEnded = true;
-                winnerId = (aliveCount == 1) ? lastAliveId : 0;
+            if (!roundEnded) {
+                if (gameMode == 3) {
+                    if (paintTimeLeft <= 0 || aliveCount == 0) {
+                        roundEnded = true;
+                        calculatePaintWinner();
+                    }
+                } else {
+                    if (aliveCount <= 1) {
+                        roundEnded = true;
+                        winnerId = (aliveCount == 1) ? lastAliveId : 0;
+                    }
+                }
             }
 
             if (roundEnded) {
@@ -208,19 +240,41 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
+    public void calculatePaintWinner() {
+        int[] scores = new int[5];
+        for(int x = 0; x < MAX_SCREEN_COL; x++) {
+            for(int y = 0; y < MAX_SCREEN_ROW; y++) {
+                if(paintedMap[x][y] > 0) scores[paintedMap[x][y]]++;
+            }
+        }
+
+        int maxScore = -1;
+        int winId = 0;
+        boolean tie = false;
+
+        for(int i = 1; i <= 4; i++) {
+            if(scores[i] > maxScore) {
+                maxScore = scores[i];
+                winId = i;
+                tie = false;
+            } else if (scores[i] == maxScore) {
+                tie = true;
+            }
+        }
+        winnerId = tie ? 0 : winId;
+    }
+
     public void checkPowerUpCollection(Player p) {
         Rectangle playerRect = new Rectangle(p.x + p.solidArea.x, p.y + p.solidArea.y, p.solidArea.width, p.solidArea.height);
         for (int i = 0; i < powerUps.size(); i++) {
             PowerUp pu = powerUps.get(i);
             Rectangle puRect = new Rectangle(pu.col * TILE_SIZE, pu.row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             if (playerRect.intersects(puRect)) {
-
                 if (pu.type == 0) p.bombPower++;
                 else if (pu.type == 1) p.maxBombs++;
                 else if (pu.type == 2) { p.speed++; if (p.speed > 8) p.speed = 8; }
                 else if (pu.type >= 3 && pu.type <= 5) { p.activeCurse = pu.type; p.curseTimer = 600; }
                 else if (pu.type == 6) { p.armorCount++; }
-
                 powerUps.remove(i);
                 i--;
             }
@@ -228,30 +282,26 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void checkPlayerDeath(Player p) {
-        // NOWE: Sprawdzanie śmierci od Burzy (ignoryje zbroję!)
         if (gameMode == 2 && !p.isDead) {
             int pCol = (p.x + p.solidArea.x + p.solidArea.width / 2) / TILE_SIZE;
             int pRow = (p.y + p.solidArea.y + p.solidArea.height / 2) / TILE_SIZE;
-
-            if (pCol < stormPhase || pCol >= MAX_SCREEN_COL - stormPhase ||
-                    pRow < stormPhase || pRow >= MAX_SCREEN_ROW - stormPhase) {
+            if (pCol < stormPhase || pCol >= MAX_SCREEN_COL - stormPhase || pRow < stormPhase || pRow >= MAX_SCREEN_ROW - stormPhase) {
                 p.isDead = true;
-                return; // Burza zabija natychmiast, wychodzimy
+                return;
             }
         }
 
         if (p.invincibleTimer > 0) return;
 
+        // ZMIANA: W trybie Paint (3) jesteśmy całkowicie odporni na wybuchy bomb!
+        if (gameMode == 3) return;
+
         Rectangle playerRect = new Rectangle(p.x + p.solidArea.x, p.y + p.solidArea.y, p.solidArea.width, p.solidArea.height);
         for (Explosion e : explosions) {
             Rectangle expRect = new Rectangle(e.col * TILE_SIZE, e.row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             if (playerRect.intersects(expRect)) {
-                if (p.armorCount > 0) {
-                    p.armorCount--;
-                    p.invincibleTimer = 60;
-                } else {
-                    p.isDead = true;
-                }
+                if (p.armorCount > 0) { p.armorCount--; p.invincibleTimer = 60; }
+                else { p.isDead = true; }
                 break;
             }
         }
@@ -262,6 +312,8 @@ public class GamePanel extends JPanel implements Runnable {
         int r = b.row;
         int power = b.owner.bombPower;
 
+        if (gameMode == 3) paintedMap[c][r] = b.owner.id;
+
         explosions.add(new Explosion(c, r));
         int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
 
@@ -271,6 +323,8 @@ public class GamePanel extends JPanel implements Runnable {
                 int nextRow = r + dir[1] * i;
 
                 if (nextCol < 0 || nextCol >= MAX_SCREEN_COL || nextRow < 0 || nextRow >= MAX_SCREEN_ROW) break;
+
+                if (gameMode == 3) paintedMap[nextCol][nextRow] = b.owner.id;
 
                 for (int j = 0; j < powerUps.size(); j++) {
                     if (powerUps.get(j).col == nextCol && powerUps.get(j).row == nextRow) {
@@ -286,14 +340,12 @@ public class GamePanel extends JPanel implements Runnable {
                     map[nextCol][nextRow] = 0;
                     explosions.add(new Explosion(nextCol, nextRow));
 
-                    // Boxy wyrzucają loot w trybie 1 oraz w trybie 2!
-                    if ((gameMode == 1 || gameMode == 2) && Math.random() < 0.35) {
+                    if (gameMode == 1 && Math.random() < 0.35) {
                         double rand = Math.random();
                         int type;
                         if (rand < 0.5) type = (int)(Math.random() * 3);
                         else if (rand < 0.8) type = 3 + (int)(Math.random() * 3);
                         else type = 6;
-
                         powerUps.add(new PowerUp(nextCol, nextRow, type));
                     }
                     break;
@@ -322,7 +374,21 @@ public class GamePanel extends JPanel implements Runnable {
         g2.fillRect(0, 0, SCREEN_WIDTH, TOTAL_SCREEN_HEIGHT);
 
         if (currentState == GameState.PLAY || currentState == GameState.PAUSE) {
-            // Rysowanie mapy
+
+            if (gameMode == 3) {
+                for (int x = 0; x < MAX_SCREEN_COL; x++) {
+                    for (int y = 0; y < MAX_SCREEN_ROW; y++) {
+                        int ownerId = paintedMap[x][y];
+                        if (ownerId > 0) {
+                            Color c = Color.WHITE;
+                            for (Player p : players) if (p.id == ownerId) c = p.color;
+                            g2.setColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), 120));
+                            g2.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        }
+                    }
+                }
+            }
+
             for (int x = 0; x < MAX_SCREEN_COL; x++) {
                 for (int y = 0; y < MAX_SCREEN_ROW; y++) {
                     int screenX = x * TILE_SIZE;
@@ -342,9 +408,8 @@ public class GamePanel extends JPanel implements Runnable {
             for (Explosion e : explosions) e.draw(g2);
             for (Player p : players) p.draw(g2);
 
-            // NOWE: Rysowanie na wierzchu półprzezroczystej burzy
             if (gameMode == 2 && stormPhase > 0) {
-                g2.setColor(new Color(128, 0, 128, 150)); // Fioletowy, półprzezroczysty
+                g2.setColor(new Color(128, 0, 128, 150));
                 for (int x = 0; x < MAX_SCREEN_COL; x++) {
                     for (int y = 0; y < MAX_SCREEN_ROW; y++) {
                         if (x < stormPhase || x >= MAX_SCREEN_COL - stormPhase ||
