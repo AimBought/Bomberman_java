@@ -51,9 +51,11 @@ public class UI {
 
             g2.setFont(smallFont);
             g2.setColor(p.color);
-            String title = "P" + p.id;
 
-            // NOWE: Dynamiczne sumowanie punktów zamalowanych kafelków
+            // NOWE: Dodanie widocznej plakietki [BOT]
+            String title = "P" + p.id;
+            if (p.isBot) title += " [BOT]";
+
             if (gp.gameMode == 3) {
                 int score = 0;
                 for(int x = 0; x < GamePanel.MAX_SCREEN_COL; x++) {
@@ -97,7 +99,6 @@ public class UI {
         g2.setFont(smallFont);
         String timeText;
         if (!gp.roundEnded) {
-            // ZMIANA: W trybie Paint czas odlicza do 0, w innych rośnie do góry
             int t = (gp.gameMode == 3) ? gp.paintTimeLeft : gp.playTimer;
             int seconds = (t / 60) % 60;
             int minutes = (t / 60) / 60;
@@ -237,44 +238,53 @@ public class UI {
         g2.setFont(titleFont);
         String title = "BOMBERMAN";
         int titleX = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(title) / 2;
-        g2.drawString(title, titleX, 150);
+        g2.drawString(title, titleX, 120);
 
         g2.setFont(normalFont);
 
+        // NOWE: Rozmieszczenie 7 opcji w menu z mniejszym odstępem
+        int startY = 190;
+        int spacing = 45;
+
         String opt0 = "Nowa Gra";
         int opt0X = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(opt0) / 2;
-        g2.drawString(opt0, opt0X, 230);
-        if (commandNum == 0) g2.drawString(">", opt0X - 30, 230);
+        g2.drawString(opt0, opt0X, startY);
+        if (commandNum == 0) g2.drawString(">", opt0X - 30, startY);
 
         String opt1 = "< Ilość Graczy: " + gp.numberOfPlayers + " >";
         int opt1X = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(opt1) / 2;
-        g2.drawString(opt1, opt1X, 280);
-        if (commandNum == 1) g2.drawString(">", opt1X - 30, 280);
+        g2.drawString(opt1, opt1X, startY + spacing);
+        if (commandNum == 1) g2.drawString(">", opt1X - 30, startY + spacing);
+
+        String opt2 = "< Ilość Botów: " + gp.numberOfBots + " >";
+        int opt2X = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(opt2) / 2;
+        g2.drawString(opt2, opt2X, startY + spacing * 2);
+        if (commandNum == 2) g2.drawString(">", opt2X - 30, startY + spacing * 2);
 
         String mapName = gp.mapNames.isEmpty() ? "Brak Mapy" : gp.mapNames.get(gp.currentMapIndex);
-        String opt2 = "< Mapa: " + mapName + " >";
-        int opt2X = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(opt2) / 2;
-        g2.drawString(opt2, opt2X, 330);
-        if (commandNum == 2) g2.drawString(">", opt2X - 30, 330);
+        String opt3 = "< Mapa: " + mapName + " >";
+        int opt3X = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(opt3) / 2;
+        g2.drawString(opt3, opt3X, startY + spacing * 3);
+        if (commandNum == 3) g2.drawString(">", opt3X - 30, startY + spacing * 3);
 
         String modeName = "Klasyczny";
         if (gp.gameMode == 1) modeName = "Ulepszenia";
         if (gp.gameMode == 2) modeName = "Battle Royale";
-        if (gp.gameMode == 3) modeName = "Paint"; // ZMIANA
+        if (gp.gameMode == 3) modeName = "Paint";
 
-        String opt3 = "< Tryb: " + modeName + " >";
-        int opt3X = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(opt3) / 2;
-        g2.drawString(opt3, opt3X, 380);
-        if (commandNum == 3) g2.drawString(">", opt3X - 30, 380);
-
-        String opt4 = "Opcje";
+        String opt4 = "< Tryb: " + modeName + " >";
         int opt4X = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(opt4) / 2;
-        g2.drawString(opt4, opt4X, 430);
-        if (commandNum == 4) g2.drawString(">", opt4X - 30, 430);
+        g2.drawString(opt4, opt4X, startY + spacing * 4);
+        if (commandNum == 4) g2.drawString(">", opt4X - 30, startY + spacing * 4);
 
-        String opt5 = "Wyjście";
+        String opt5 = "Opcje";
         int opt5X = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(opt5) / 2;
-        g2.drawString(opt5, opt5X, 480);
-        if (commandNum == 5) g2.drawString(">", opt5X - 30, 480);
+        g2.drawString(opt5, opt5X, startY + spacing * 5);
+        if (commandNum == 5) g2.drawString(">", opt5X - 30, startY + spacing * 5);
+
+        String opt6 = "Wyjście";
+        int opt6X = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(opt6) / 2;
+        g2.drawString(opt6, opt6X, startY + spacing * 6);
+        if (commandNum == 6) g2.drawString(">", opt6X - 30, startY + spacing * 6);
     }
 }

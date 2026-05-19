@@ -41,15 +41,16 @@ public class GamePanel extends JPanel implements Runnable {
     public ArrayList<Explosion> explosions = new ArrayList<>();
     public ArrayList<PowerUp> powerUps = new ArrayList<>();
 
-    public int numberOfPlayers = 2;
+    // NOWE: Domyślnie Gramy Solo z 3 Botami
+    public int numberOfPlayers = 1;
+    public int numberOfBots = 3;
+
     public ArrayList<String> mapNames = new ArrayList<>();
     public int currentMapIndex = 0;
-
     public int gameMode = 1;
 
     public int stormPhase = 0;
     public int stormTimer = 0;
-
     public int[][] paintedMap;
     public int paintTimeLeft = 3600;
 
@@ -100,10 +101,30 @@ public class GamePanel extends JPanel implements Runnable {
         paintedMap = new int[MAX_SCREEN_COL][MAX_SCREEN_ROW];
         paintTimeLeft = 3600;
 
-        players.add(new Player(this, keyH.p1, 1, Color.WHITE, 0, 0));
-        players.add(new Player(this, keyH.p2, 2, new Color(50, 150, 255), MAX_SCREEN_COL - 1, MAX_SCREEN_ROW - 1));
-        if (numberOfPlayers >= 3) players.add(new Player(this, keyH.p3, 3, Color.RED, MAX_SCREEN_COL - 1, 0));
-        if (numberOfPlayers >= 4) players.add(new Player(this, keyH.p4, 4, Color.YELLOW, 0, MAX_SCREEN_ROW - 1));
+        // NOWE: Elastyczne spawnowanie
+        int[][] spawns = {
+                {0, 0},
+                {MAX_SCREEN_COL - 1, MAX_SCREEN_ROW - 1},
+                {MAX_SCREEN_COL - 1, 0},
+                {0, MAX_SCREEN_ROW - 1}
+        };
+        Color[] colors = {Color.WHITE, new Color(50, 150, 255), Color.RED, Color.YELLOW};
+        KeyHandler.PlayerInput[] inputs = {keyH.p1, keyH.p2, keyH.p3, keyH.p4};
+
+        int currentId = 1;
+
+        // Dodawanie Prawdziwych Graczy
+        for(int i = 0; i < numberOfPlayers; i++) {
+            players.add(new Player(this, inputs[i], currentId, colors[currentId-1], spawns[currentId-1][0], spawns[currentId-1][1], false));
+            currentId++;
+        }
+
+        // Dodawanie Botów na pozostałych miejscach
+        for(int i = 0; i < numberOfBots; i++) {
+            if(currentId > 4) break;
+            players.add(new Player(this, null, currentId, colors[currentId-1], spawns[currentId-1][0], spawns[currentId-1][1], true));
+            currentId++;
+        }
 
         loadMap();
     }
@@ -292,8 +313,6 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         if (p.invincibleTimer > 0) return;
-
-        // ZMIANA: W trybie Paint (3) jesteśmy całkowicie odporni na wybuchy bomb!
         if (gameMode == 3) return;
 
         Rectangle playerRect = new Rectangle(p.x + p.solidArea.x, p.y + p.solidArea.y, p.solidArea.width, p.solidArea.height);

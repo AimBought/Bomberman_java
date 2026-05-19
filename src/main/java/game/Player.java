@@ -33,13 +33,20 @@ public class Player {
     public int activeCurse = -1;
     public int lastDir = 2;
 
-    public Player(GamePanel gp, KeyHandler.PlayerInput input, int id, Color color, int startCol, int startRow) {
+    // NOWE: Zmienne dla bota
+    public boolean isBot;
+    private int botTimer = 0;
+    private int botDir = 0;
+    private boolean botBomb = false;
+
+    public Player(GamePanel gp, KeyHandler.PlayerInput input, int id, Color color, int startCol, int startRow, boolean isBot) {
         this.gp = gp;
         this.input = input;
         this.id = id;
         this.color = color;
         this.x = startCol * GamePanel.TILE_SIZE;
         this.y = startRow * GamePanel.TILE_SIZE;
+        this.isBot = isBot;
 
         setDefaultValues();
         solidArea = new Rectangle(10, 10, 28, 28);
@@ -67,14 +74,38 @@ public class Player {
         if (curseTimer > 0) curseTimer--;
         else activeCurse = -1;
 
-        boolean up = input.up;
-        boolean down = input.down;
-        boolean left = input.left;
-        boolean right = input.right;
-        boolean bomb = input.bomb;
+        boolean up = false, down = false, left = false, right = false, bomb = false;
 
+        // NOWE: Logika decyzyjna Bota
+        if (isBot) {
+            if (botTimer <= 0) {
+                botDir = (int)(Math.random() * 4); // 0=Góra, 1=Dół, 2=Lewo, 3=Prawo
+                botTimer = 15 + (int)(Math.random() * 30); // Idź w tym kierunku przez chwilę
+                botBomb = (Math.random() < 0.05); // 5% szansy na podłożenie bomby przy zmianie kierunku
+            } else {
+                botTimer--;
+                botBomb = false;
+            }
+
+            if (botDir == 0) up = true;
+            if (botDir == 1) down = true;
+            if (botDir == 2) left = true;
+            if (botDir == 3) right = true;
+            bomb = botBomb;
+        }
+        else if (input != null) {
+            // Logika dla gracza (jeśli nie jest botem)
+            up = input.up;
+            down = input.down;
+            left = input.left;
+            right = input.right;
+            bomb = input.bomb;
+        }
+
+        // Efekty klątw
         if (activeCurse == 3) {
-            up = input.down; down = input.up; left = input.right; right = input.left;
+            boolean tempUp = up, tempDown = down, tempLeft = left, tempRight = right;
+            up = tempDown; down = tempUp; left = tempRight; right = tempLeft;
         }
         else if (activeCurse == 4) {
             if (up) lastDir = 1; else if (down) lastDir = 2; else if (left) lastDir = 3; else if (right) lastDir = 4;
@@ -89,7 +120,6 @@ public class Player {
         if (bomb && bombCooldown == 0 && bombsPlaced < maxBombs) {
             int centerCol = (x + GamePanel.TILE_SIZE / 2) / GamePanel.TILE_SIZE;
             int centerRow = (y + GamePanel.TILE_SIZE / 2) / GamePanel.TILE_SIZE;
-            // ZMIANA: Bomba nie potrzebuje już gp w parametrze
             gp.bombs.add(new Bomb(centerCol, centerRow, this));
             bombsPlaced++;
             bombCooldown = 30;
@@ -103,8 +133,12 @@ public class Player {
         if (left) nextX -= speed;
         if (right) nextX += speed;
 
+        // Jeśli bot trafi na przeszkodę, zmuś go do natychmiastowej zmiany kierunku!
         if (!checkCollision(nextX, y)) x = nextX;
+        else if (isBot) botTimer = 0;
+
         if (!checkCollision(x, nextY)) y = nextY;
+        else if (isBot) botTimer = 0;
     }
 
     private boolean checkCollision(int targetX, int targetY) {
