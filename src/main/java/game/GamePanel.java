@@ -41,9 +41,9 @@ public class GamePanel extends JPanel implements Runnable {
     public ArrayList<Explosion> explosions = new ArrayList<>();
     public ArrayList<PowerUp> powerUps = new ArrayList<>();
 
-    // NOWE: Domyślnie Gramy Solo z 3 Botami
     public int numberOfPlayers = 1;
     public int numberOfBots = 3;
+    public int botDifficulty = 1; // NOWE: 0 = Łatwy, 1 = Trudny
 
     public ArrayList<String> mapNames = new ArrayList<>();
     public int currentMapIndex = 0;
@@ -101,28 +101,25 @@ public class GamePanel extends JPanel implements Runnable {
         paintedMap = new int[MAX_SCREEN_COL][MAX_SCREEN_ROW];
         paintTimeLeft = 3600;
 
-        // NOWE: Elastyczne spawnowanie
         int[][] spawns = {
-                {0, 0},
-                {MAX_SCREEN_COL - 1, MAX_SCREEN_ROW - 1},
-                {MAX_SCREEN_COL - 1, 0},
-                {0, MAX_SCREEN_ROW - 1}
+                {0, 0}, {MAX_SCREEN_COL - 1, MAX_SCREEN_ROW - 1},
+                {MAX_SCREEN_COL - 1, 0}, {0, MAX_SCREEN_ROW - 1}
         };
         Color[] colors = {Color.WHITE, new Color(50, 150, 255), Color.RED, Color.YELLOW};
         KeyHandler.PlayerInput[] inputs = {keyH.p1, keyH.p2, keyH.p3, keyH.p4};
 
         int currentId = 1;
 
-        // Dodawanie Prawdziwych Graczy
+        // Gracze (ludzie) zawsze mają botDifficulty = 0, bo i tak z niego nie korzystają
         for(int i = 0; i < numberOfPlayers; i++) {
-            players.add(new Player(this, inputs[i], currentId, colors[currentId-1], spawns[currentId-1][0], spawns[currentId-1][1], false));
+            players.add(new Player(this, inputs[i], currentId, colors[currentId-1], spawns[currentId-1][0], spawns[currentId-1][1], false, 0));
             currentId++;
         }
 
-        // Dodawanie Botów na pozostałych miejscach
+        // ZMIANA: Boty otrzymują botDifficulty z menu!
         for(int i = 0; i < numberOfBots; i++) {
             if(currentId > 4) break;
-            players.add(new Player(this, null, currentId, colors[currentId-1], spawns[currentId-1][0], spawns[currentId-1][1], true));
+            players.add(new Player(this, null, currentId, colors[currentId-1], spawns[currentId-1][0], spawns[currentId-1][1], true, botDifficulty));
             currentId++;
         }
 
@@ -132,9 +129,7 @@ public class GamePanel extends JPanel implements Runnable {
     public void loadMap() {
         if (gameMode == 3) {
             for (int r = 0; r < MAX_SCREEN_ROW; r++) {
-                for (int c = 0; c < MAX_SCREEN_COL; c++) {
-                    map[c][r] = 0;
-                }
+                for (int c = 0; c < MAX_SCREEN_COL; c++) map[c][r] = 0;
             }
             return;
         }
@@ -201,7 +196,6 @@ public class GamePanel extends JPanel implements Runnable {
 
                 if (gameMode == 3) {
                     paintTimeLeft--;
-
                     if (playTimer % 180 == 0) {
                         int rCol = (int)(Math.random() * MAX_SCREEN_COL);
                         int rRow = (int)(Math.random() * MAX_SCREEN_ROW);
@@ -211,7 +205,6 @@ public class GamePanel extends JPanel implements Runnable {
                         if (rand < 0.5) type = (int)(Math.random() * 3);
                         else if (rand < 0.8) type = 3 + (int)(Math.random() * 3);
                         else type = 6;
-
                         powerUps.add(new PowerUp(rCol, rRow, type));
                     }
                 }
@@ -264,9 +257,7 @@ public class GamePanel extends JPanel implements Runnable {
     public void calculatePaintWinner() {
         int[] scores = new int[5];
         for(int x = 0; x < MAX_SCREEN_COL; x++) {
-            for(int y = 0; y < MAX_SCREEN_ROW; y++) {
-                if(paintedMap[x][y] > 0) scores[paintedMap[x][y]]++;
-            }
+            for(int y = 0; y < MAX_SCREEN_ROW; y++) if(paintedMap[x][y] > 0) scores[paintedMap[x][y]]++;
         }
 
         int maxScore = -1;
@@ -274,13 +265,8 @@ public class GamePanel extends JPanel implements Runnable {
         boolean tie = false;
 
         for(int i = 1; i <= 4; i++) {
-            if(scores[i] > maxScore) {
-                maxScore = scores[i];
-                winId = i;
-                tie = false;
-            } else if (scores[i] == maxScore) {
-                tie = true;
-            }
+            if(scores[i] > maxScore) { maxScore = scores[i]; winId = i; tie = false; }
+            else if (scores[i] == maxScore) tie = true;
         }
         winnerId = tie ? 0 : winId;
     }
@@ -342,7 +328,6 @@ public class GamePanel extends JPanel implements Runnable {
                 int nextRow = r + dir[1] * i;
 
                 if (nextCol < 0 || nextCol >= MAX_SCREEN_COL || nextRow < 0 || nextRow >= MAX_SCREEN_ROW) break;
-
                 if (gameMode == 3) paintedMap[nextCol][nextRow] = b.owner.id;
 
                 for (int j = 0; j < powerUps.size(); j++) {
@@ -359,7 +344,7 @@ public class GamePanel extends JPanel implements Runnable {
                     map[nextCol][nextRow] = 0;
                     explosions.add(new Explosion(nextCol, nextRow));
 
-                    if (gameMode == 1 && Math.random() < 0.35) {
+                    if ((gameMode == 1 || gameMode == 2) && Math.random() < 0.35) {
                         double rand = Math.random();
                         int type;
                         if (rand < 0.5) type = (int)(Math.random() * 3);

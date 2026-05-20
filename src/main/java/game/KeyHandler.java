@@ -55,7 +55,7 @@ public class KeyHandler implements KeyListener {
             if (code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER) {
                 if (gp.ui.commandNum == 20) {
                     gp.currentState = gp.previousState;
-                    gp.ui.commandNum = (gp.previousState == GameState.MENU) ? 5 : 2;
+                    gp.ui.commandNum = (gp.previousState == GameState.MENU) ? 6 : 2;
                 } else {
                     waitingForKey = true;
                     keyToRebind = gp.ui.commandNum;
@@ -63,17 +63,17 @@ public class KeyHandler implements KeyListener {
             }
             if (code == KeyEvent.VK_ESCAPE) {
                 gp.currentState = gp.previousState;
-                gp.ui.commandNum = (gp.previousState == GameState.MENU) ? 5 : 2;
+                gp.ui.commandNum = (gp.previousState == GameState.MENU) ? 6 : 2;
             }
         }
         else if (gp.currentState == GameState.MENU) {
             if (code == KeyEvent.VK_W || code == KeyEvent.VK_UP) {
                 gp.ui.commandNum--;
-                if (gp.ui.commandNum < 0) gp.ui.commandNum = 6; // NOWE: Opcji jest 7 (0-6)
+                if (gp.ui.commandNum < 0) gp.ui.commandNum = 7; // ZMIANA: Menu 0-7
             }
             if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) {
                 gp.ui.commandNum++;
-                if (gp.ui.commandNum > 6) gp.ui.commandNum = 0;
+                if (gp.ui.commandNum > 7) gp.ui.commandNum = 0;
             }
             if (code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT) {
                 if (gp.ui.commandNum == 1) {
@@ -85,11 +85,14 @@ public class KeyHandler implements KeyListener {
                     gp.numberOfBots--;
                     if (gp.numberOfBots < 0) gp.numberOfBots = 4 - gp.numberOfPlayers;
                 }
-                if (gp.ui.commandNum == 3) {
+                if (gp.ui.commandNum == 3) { // NOWE: Zmiana Poziomu Bota
+                    gp.botDifficulty = (gp.botDifficulty == 0) ? 1 : 0;
+                }
+                if (gp.ui.commandNum == 4) {
                     gp.currentMapIndex--;
                     if (gp.currentMapIndex < 0) gp.currentMapIndex = gp.mapNames.size() - 1;
                 }
-                if (gp.ui.commandNum == 4) {
+                if (gp.ui.commandNum == 5) {
                     gp.gameMode--;
                     if (gp.gameMode < 0) gp.gameMode = 3;
                 }
@@ -104,23 +107,26 @@ public class KeyHandler implements KeyListener {
                     gp.numberOfBots++;
                     if (gp.numberOfBots > 4 - gp.numberOfPlayers) gp.numberOfBots = 0;
                 }
-                if (gp.ui.commandNum == 3) {
+                if (gp.ui.commandNum == 3) { // NOWE: Zmiana Poziomu Bota
+                    gp.botDifficulty = (gp.botDifficulty == 0) ? 1 : 0;
+                }
+                if (gp.ui.commandNum == 4) {
                     gp.currentMapIndex++;
                     if (gp.currentMapIndex > gp.mapNames.size() - 1) gp.currentMapIndex = 0;
                 }
-                if (gp.ui.commandNum == 4) {
+                if (gp.ui.commandNum == 5) {
                     gp.gameMode++;
                     if (gp.gameMode > 3) gp.gameMode = 0;
                 }
             }
             if (code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER) {
                 if (gp.ui.commandNum == 0) { gp.resetGame(); gp.currentState = GameState.PLAY; }
-                if (gp.ui.commandNum == 5) {
+                if (gp.ui.commandNum == 6) {
                     gp.previousState = GameState.MENU;
                     gp.ui.commandNum = 0;
                     gp.currentState = GameState.OPTIONS;
                 }
-                if (gp.ui.commandNum == 6) System.exit(0);
+                if (gp.ui.commandNum == 7) System.exit(0);
             }
         }
         else if (gp.currentState == GameState.PAUSE) {

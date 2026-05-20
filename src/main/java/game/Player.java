@@ -33,13 +33,13 @@ public class Player {
     public int activeCurse = -1;
     public int lastDir = 2;
 
-    // NOWE: Zmienne dla bota
     public boolean isBot;
+    public int botDifficulty;
     private int botTimer = 0;
     private int botDir = 0;
     private boolean botBomb = false;
 
-    public Player(GamePanel gp, KeyHandler.PlayerInput input, int id, Color color, int startCol, int startRow, boolean isBot) {
+    public Player(GamePanel gp, KeyHandler.PlayerInput input, int id, Color color, int startCol, int startRow, boolean isBot, int botDifficulty) {
         this.gp = gp;
         this.input = input;
         this.id = id;
@@ -47,6 +47,7 @@ public class Player {
         this.x = startCol * GamePanel.TILE_SIZE;
         this.y = startRow * GamePanel.TILE_SIZE;
         this.isBot = isBot;
+        this.botDifficulty = botDifficulty;
 
         setDefaultValues();
         solidArea = new Rectangle(10, 10, 28, 28);
@@ -65,6 +66,17 @@ public class Player {
         activeCurse = -1;
     }
 
+    private boolean isTileSafe(int c, int r) {
+        for (Explosion e : gp.explosions) {
+            if (e.col == c && e.row == r) return false;
+        }
+        for (Bomb b : gp.bombs) {
+            if (b.col == c && Math.abs(b.row - r) <= b.owner.bombPower) return false;
+            if (b.row == r && Math.abs(b.col - c) <= b.owner.bombPower) return false;
+        }
+        return true;
+    }
+
     public void update() {
         if (isDead) return;
 
@@ -76,15 +88,86 @@ public class Player {
 
         boolean up = false, down = false, left = false, right = false, bomb = false;
 
-        // NOWE: Logika decyzyjna Bota
         if (isBot) {
-            if (botTimer <= 0) {
-                botDir = (int)(Math.random() * 4); // 0=Góra, 1=Dół, 2=Lewo, 3=Prawo
-                botTimer = 15 + (int)(Math.random() * 30); // Idź w tym kierunku przez chwilę
-                botBomb = (Math.random() < 0.05); // 5% szansy na podłożenie bomby przy zmianie kierunku
-            } else {
-                botTimer--;
-                botBomb = false;
+            if (botDifficulty == 0) {
+                if (botTimer <= 0) {
+                    botDir = (int)(Math.random() * 4);
+                    botTimer = 15 + (int)(Math.random() * 30);
+                    botBomb = (Math.random() < 0.05);
+                } else {
+                    botTimer--;
+                    botBomb = false;
+                }
+            }
+            else {
+                if (botTimer <= 0) {
+                    botTimer = 15;
+                    botBomb = false;
+
+                    // ZMIANA: Poprawione odwołania do GamePanel.TILE_SIZE
+                    int myCol = (x + GamePanel.TILE_SIZE / 2) / GamePanel.TILE_SIZE;
+                    int myRow = (y + GamePanel.TILE_SIZE / 2) / GamePanel.TILE_SIZE;
+                    boolean imSafe = isTileSafe(myCol, myRow);
+
+                    Player target = null;
+                    int minDist = 999;
+                    for (Player p : gp.players) {
+                        if (!p.isDead && !p.isBot) {
+                            // ZMIANA: Poprawione odwołania do GamePanel.TILE_SIZE
+                            int dist = Math.abs((p.x/GamePanel.TILE_SIZE) - myCol) + Math.abs((p.y/GamePanel.TILE_SIZE) - myRow);
+                            if (dist < minDist) { minDist = dist; target = p; }
+                        }
+                    }
+
+                    int bestDir = -1;
+                    int bestScore = -9999;
+                    int[][] dirs = {{0,-1}, {0,1}, {-1,0}, {1,0}};
+
+                    for (int i=0; i<4; i++) {
+                        int testCol = myCol + dirs[i][0];
+                        int testRow = myRow + dirs[i][1];
+
+                        if (testCol < 0 || testCol >= GamePanel.MAX_SCREEN_COL || testRow < 0 || testRow >= GamePanel.MAX_SCREEN_ROW) continue;
+
+                        int tile = gp.map[testCol][testRow];
+                        if (tile == 1) continue;
+
+                        if (tile == 2) {
+                            if (imSafe && bombsPlaced < maxBombs) botBomb = true;
+                            continue;
+                        }
+
+                        boolean safeTile = isTileSafe(testCol, testRow);
+                        int score = 0;
+
+                        if (safeTile) score += 1000;
+                        else score -= 1000;
+
+                        if (target != null) {
+                            // ZMIANA: Poprawione odwołania do GamePanel.TILE_SIZE
+                            int distToTarget = Math.abs((target.x/GamePanel.TILE_SIZE) - testCol) + Math.abs((target.y/GamePanel.TILE_SIZE) - testRow);
+                            score -= distToTarget * 10;
+                        }
+
+                        if (i == botDir) score += 5;
+
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestDir = i;
+                        }
+                    }
+
+                    if (bestDir != -1) botDir = bestDir;
+
+                    if (target != null && minDist <= 2 && imSafe && bombsPlaced < maxBombs) {
+                        botBomb = true;
+                    }
+
+                    if (imSafe && bestScore < 0) botDir = -1;
+                } else {
+                    botTimer--;
+                    botBomb = false;
+                }
             }
 
             if (botDir == 0) up = true;
@@ -92,17 +175,12 @@ public class Player {
             if (botDir == 2) left = true;
             if (botDir == 3) right = true;
             bomb = botBomb;
+
         }
         else if (input != null) {
-            // Logika dla gracza (jeśli nie jest botem)
-            up = input.up;
-            down = input.down;
-            left = input.left;
-            right = input.right;
-            bomb = input.bomb;
+            up = input.up; down = input.down; left = input.left; right = input.right; bomb = input.bomb;
         }
 
-        // Efekty klątw
         if (activeCurse == 3) {
             boolean tempUp = up, tempDown = down, tempLeft = left, tempRight = right;
             up = tempDown; down = tempUp; left = tempRight; right = tempLeft;
@@ -118,6 +196,7 @@ public class Player {
         }
 
         if (bomb && bombCooldown == 0 && bombsPlaced < maxBombs) {
+            // ZMIANA: Poprawione odwołania do GamePanel.TILE_SIZE
             int centerCol = (x + GamePanel.TILE_SIZE / 2) / GamePanel.TILE_SIZE;
             int centerRow = (y + GamePanel.TILE_SIZE / 2) / GamePanel.TILE_SIZE;
             gp.bombs.add(new Bomb(centerCol, centerRow, this));
@@ -133,7 +212,6 @@ public class Player {
         if (left) nextX -= speed;
         if (right) nextX += speed;
 
-        // Jeśli bot trafi na przeszkodę, zmuś go do natychmiastowej zmiany kierunku!
         if (!checkCollision(nextX, y)) x = nextX;
         else if (isBot) botTimer = 0;
 
@@ -159,13 +237,9 @@ public class Player {
     }
 
     public void draw(Graphics2D g2) {
-        if (isDead) {
-            g2.setColor(Color.DARK_GRAY);
-        } else if (invincibleTimer > 0 && invincibleTimer % 10 < 5) {
-            g2.setColor(Color.WHITE);
-        } else {
-            g2.setColor(color);
-        }
+        if (isDead) g2.setColor(Color.DARK_GRAY);
+        else if (invincibleTimer > 0 && invincibleTimer % 10 < 5) g2.setColor(Color.WHITE);
+        else g2.setColor(color);
 
         g2.fillRect(x + drawOffset, y + drawOffset, drawSize, drawSize);
 
