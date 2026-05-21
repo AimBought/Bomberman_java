@@ -12,17 +12,16 @@ public class UI {
 
     public int commandNum = 0;
 
-    // Paleta kolorów Menu
-    Color bgColor = new Color(20, 25, 40); // Głęboki, mroczny granat
-    Color goldColor = new Color(255, 215, 0); // Złoty do tytułów
-    Color highlightColor = new Color(0, 255, 255); // Cyjan do zaznaczonych opcji
+    Color bgColor = new Color(20, 25, 40);
+    Color goldColor = new Color(255, 215, 0);
+    Color highlightColor = new Color(0, 255, 255);
 
     public UI(GamePanel gp) {
         this.gp = gp;
-        titleFont = new Font("Impact", Font.BOLD, 56); // Bardziej masywna czcionka tytułowa
+        titleFont = new Font("Impact", Font.BOLD, 56);
         normalFont = new Font("Arial", Font.BOLD, 28);
         smallFont = new Font("Arial", Font.BOLD, 18);
-        tinyFont = new Font("Arial", Font.PLAIN, 14);
+        tinyFont = new Font("Arial", Font.PLAIN, 13); // Odrobinę mniejsza czcionka dla HUD
     }
 
     public void draw(Graphics2D g2) {
@@ -38,26 +37,23 @@ public class UI {
         }
     }
 
-    // Metoda pomocnicza do cieniowanego tekstu
     private void drawShadowedText(Graphics2D g2, String text, int x, int y, Color mainColor) {
         g2.setColor(Color.BLACK);
-        g2.drawString(text, x + 4, y + 4); // Cień
+        g2.drawString(text, x + 4, y + 4);
         g2.setColor(mainColor);
-        g2.drawString(text, x, y); // Główny tekst
+        g2.drawString(text, x, y);
     }
 
     private void drawPlayHUD(Graphics2D g2) {
         int yStart = GamePanel.SCREEN_HEIGHT;
 
-        // Tło HUD
         g2.setColor(new Color(15, 15, 20));
         g2.fillRect(0, yStart - 1, GamePanel.SCREEN_WIDTH, GamePanel.HUD_HEIGHT + 2);
 
-        // Złota ramka na górze HUDu
         g2.setColor(goldColor);
         g2.setStroke(new BasicStroke(3));
         g2.drawLine(0, yStart, GamePanel.SCREEN_WIDTH, yStart);
-        g2.setStroke(new BasicStroke(1)); // Powrót do domyślnej grubości
+        g2.setStroke(new BasicStroke(1));
 
         int sectionWidth = GamePanel.SCREEN_WIDTH / gp.players.size();
         g2.setFont(tinyFont);
@@ -80,38 +76,47 @@ public class UI {
                 for(int x = 0; x < GamePanel.MAX_SCREEN_COL; x++) {
                     for(int y = 0; y < GamePanel.MAX_SCREEN_ROW; y++) if(gp.paintedMap[x][y] == p.id) score++;
                 }
-                title += " (" + score + " PKT)";
+                title += " (" + score + ")";
             }
 
-            if (p.isDead) title += " (MARTWY)";
-            else if (p.activeCurse != -1) {
-                int secondsLeft = (p.curseTimer / 60) + 1;
-                title += " (KLĄTWA: " + secondsLeft + "s)";
-            }
-
-            // Kolorowy nick gracza z delikatnym cieniem
+            // LINIJA 1: Nazwa gracza
             g2.setColor(Color.BLACK);
-            g2.drawString(title, startX + 11, yStart + 26);
+            g2.drawString(title, startX + 11, yStart + 23);
             g2.setColor(p.color);
-            g2.drawString(title, startX + 10, yStart + 25);
+            g2.drawString(title, startX + 10, yStart + 22);
 
-            if (p.armorCount > 0 && !p.isDead) {
-                int armorX = startX + 15 + g2.getFontMetrics().stringWidth(title);
+            // LINIJA 2: Status Gracza (Martwy / Klątwa / Pancerz)
+            g2.setFont(tinyFont);
+            int statusY = yStart + 42;
+
+            if (p.isDead) {
+                g2.setColor(Color.RED);
+                g2.drawString("STATUS: MARTWY", startX + 10, statusY);
+            } else if (p.activeCurse != -1) {
+                g2.setColor(Color.YELLOW);
+                int secondsLeft = (p.curseTimer / 60) + 1;
+                g2.drawString("KLĄTWA: " + secondsLeft + "s", startX + 10, statusY);
+            } else if (p.armorCount > 0) {
+                g2.setColor(Color.LIGHT_GRAY);
+                g2.drawString("PANCERZ: ", startX + 10, statusY);
                 for (int j = 0; j < p.armorCount; j++) {
-                    g2.setColor(Color.LIGHT_GRAY);
-                    g2.fillArc(armorX + (j * 15), yStart + 12, 12, 14, 0, 180);
+                    int armorX = startX + 75 + (j * 15);
+                    g2.fillArc(armorX, statusY - 10, 10, 12, 0, 180);
                     g2.setColor(Color.DARK_GRAY);
-                    g2.drawArc(armorX + (j * 15), yStart + 12, 12, 14, 0, 180);
+                    g2.drawArc(armorX, statusY - 10, 10, 12, 0, 180);
+                    g2.setColor(Color.LIGHT_GRAY);
                 }
+            } else {
+                g2.setColor(Color.GRAY);
+                g2.drawString("STATUS: CZYSTY", startX + 10, statusY);
             }
 
-            g2.setFont(tinyFont);
+            // LINIJE 3 i 4: Statystyki na dwóch osobnych liniach
             g2.setColor(Color.LIGHT_GRAY);
-            g2.drawString("Zasięg: " + p.bombPower + "   Bomby: " + p.maxBombs, startX + 10, yStart + 45);
-            g2.drawString("Szybkość: " + p.speed, startX + 10, yStart + 65);
+            g2.drawString("Zasięg: " + p.bombPower + "   Bomby: " + p.maxBombs, startX + 10, yStart + 62);
+            g2.drawString("Szybkość: " + p.speed, startX + 10, yStart + 82);
         }
 
-        // Stylowy licznik czasu na górze
         g2.setColor(new Color(0, 0, 0, 200));
         g2.fillRoundRect(GamePanel.SCREEN_WIDTH / 2 - 50, 5, 100, 30, 15, 15);
         g2.setColor(goldColor);
@@ -149,7 +154,6 @@ public class UI {
             int x = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(winnerText) / 2;
             int y = GamePanel.SCREEN_HEIGHT / 2;
 
-            // Epicki cień pod ogłoszeniem zwycięzcy
             drawShadowedText(g2, winnerText, x, y, textColor);
         }
     }
@@ -201,7 +205,7 @@ public class UI {
         for (int i = 0; i < options.length; i++) {
             int col = i / 5;
             int row = i % 5;
-            int xPos = 50 + (col * 180); // Lepsze odstępy w kolumnach
+            int xPos = 50 + (col * 180);
             int yPos = 140 + (row * 50);
 
             if (i == 20) {

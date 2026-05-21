@@ -59,9 +59,8 @@ public class GamePanel extends JPanel implements Runnable {
     public int deathTimer = 300;
     public boolean roundEnded = false;
 
-    // Kolory Mapy (ZMIANA WIZUALNA)
-    Color grassColor1 = new Color(34, 139, 34); // Ciemniejsza zieleń
-    Color grassColor2 = new Color(40, 150, 40); // Jaśniejsza zieleń (szachownica)
+    Color grassColor1 = new Color(34, 139, 34);
+    Color grassColor2 = new Color(40, 150, 40);
     Color wallBase = new Color(90, 90, 90);
     Color wallHighlight = new Color(130, 130, 130);
     Color wallShadow = new Color(50, 50, 50);
@@ -365,22 +364,35 @@ public class GamePanel extends JPanel implements Runnable {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
 
-        double scaleRatio = Math.min((double) getWidth() / SCREEN_WIDTH, (double) getHeight() / TOTAL_SCREEN_HEIGHT);
-        int drawX = (int) ((getWidth() - (SCREEN_WIDTH * scaleRatio)) / 2);
-        int drawY = (int) ((getHeight() - (TOTAL_SCREEN_HEIGHT * scaleRatio)) / 2);
+        int winW = getWidth();
+        int winH = getHeight();
+
+        // 1. NOWE: Rysujemy tło automatu (zanim przeskalujemy na mniejszą planszę)
+        g2.setColor(new Color(15, 10, 30)); // Ciemny fiolet
+        g2.fillRect(0, 0, winW, winH);
+
+        // Siatka retro na bokach ekranu
+        g2.setColor(new Color(30, 20, 50));
+        for(int i = 0; i < winW; i += 64) g2.drawLine(i, 0, i, winH);
+        for(int i = 0; i < winH; i += 64) g2.drawLine(0, i, winW, i);
+
+        // 2. Skalowanie klasycznej planszy na sam środek monitora
+        double scaleRatio = Math.min((double) winW / SCREEN_WIDTH, (double) winH / TOTAL_SCREEN_HEIGHT);
+        int drawX = (int) ((winW - (SCREEN_WIDTH * scaleRatio)) / 2);
+        int drawY = (int) ((winH - (TOTAL_SCREEN_HEIGHT * scaleRatio)) / 2);
 
         g2.translate(drawX, drawY);
         g2.scale(scaleRatio, scaleRatio);
+
+        // Biała ramka odcinająca grę od tła
+        g2.setColor(Color.WHITE);
+        g2.drawRect(-1, -1, SCREEN_WIDTH + 1, TOTAL_SCREEN_HEIGHT + 1);
+
         g2.setClip(0, 0, SCREEN_WIDTH, TOTAL_SCREEN_HEIGHT);
 
-        // ZMIANA WIZUALNA: Tło gry to teraz piękna trawiasta szachownica
-        for (int x = 0; x < MAX_SCREEN_COL; x++) {
-            for (int y = 0; y < MAX_SCREEN_ROW; y++) {
-                if ((x + y) % 2 == 0) g2.setColor(grassColor1);
-                else g2.setColor(grassColor2);
-                g2.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-            }
-        }
+        // Czarne tło za samą planszą
+        g2.setColor(Color.BLACK);
+        g2.fillRect(0, 0, SCREEN_WIDTH, TOTAL_SCREEN_HEIGHT);
 
         if (currentState == GameState.PLAY || currentState == GameState.PAUSE) {
 
@@ -400,32 +412,32 @@ public class GamePanel extends JPanel implements Runnable {
 
             for (int x = 0; x < MAX_SCREEN_COL; x++) {
                 for (int y = 0; y < MAX_SCREEN_ROW; y++) {
+                    if ((x + y) % 2 == 0) g2.setColor(grassColor1);
+                    else g2.setColor(grassColor2);
+                    g2.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+            }
+
+            for (int x = 0; x < MAX_SCREEN_COL; x++) {
+                for (int y = 0; y < MAX_SCREEN_ROW; y++) {
                     int screenX = x * TILE_SIZE;
                     int screenY = y * TILE_SIZE;
 
                     if (map[x][y] == 1) {
-                        // ZMIANA WIZUALNA: Ściana niezniszczalna (Szary blok 3D z krawędziami)
                         g2.setColor(wallBase);
                         g2.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-
-                        g2.setColor(wallHighlight); // Światło z góry i lewej
+                        g2.setColor(wallHighlight);
                         g2.fillRect(screenX, screenY, TILE_SIZE, 4);
                         g2.fillRect(screenX, screenY, 4, TILE_SIZE);
-
-                        g2.setColor(wallShadow); // Cień z dołu i prawej
+                        g2.setColor(wallShadow);
                         g2.fillRect(screenX, screenY + TILE_SIZE - 4, TILE_SIZE, 4);
                         g2.fillRect(screenX + TILE_SIZE - 4, screenY, 4, TILE_SIZE);
-
                     } else if (map[x][y] == 2) {
-                        // ZMIANA WIZUALNA: Zniszczalna ściana (Drewniana skrzynia)
                         g2.setColor(crateBase);
                         g2.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-
-                        g2.setColor(crateBorder); // Rama skrzyni
+                        g2.setColor(crateBorder);
                         g2.drawRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
                         g2.drawRect(screenX + 2, screenY + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-
-                        // Znak 'X' na skrzyni
                         g2.drawLine(screenX, screenY, screenX + TILE_SIZE, screenY + TILE_SIZE);
                         g2.drawLine(screenX + TILE_SIZE, screenY, screenX, screenY + TILE_SIZE);
                     }
