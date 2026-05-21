@@ -43,7 +43,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     public int numberOfPlayers = 1;
     public int numberOfBots = 3;
-    public int botDifficulty = 1; // NOWE: 0 = Łatwy, 1 = Trudny
+    public int botDifficulty = 1;
 
     public ArrayList<String> mapNames = new ArrayList<>();
     public int currentMapIndex = 0;
@@ -58,6 +58,15 @@ public class GamePanel extends JPanel implements Runnable {
     public int winnerId = -1;
     public int deathTimer = 300;
     public boolean roundEnded = false;
+
+    // Kolory Mapy (ZMIANA WIZUALNA)
+    Color grassColor1 = new Color(34, 139, 34); // Ciemniejsza zieleń
+    Color grassColor2 = new Color(40, 150, 40); // Jaśniejsza zieleń (szachownica)
+    Color wallBase = new Color(90, 90, 90);
+    Color wallHighlight = new Color(130, 130, 130);
+    Color wallShadow = new Color(50, 50, 50);
+    Color crateBase = new Color(139, 69, 19);
+    Color crateBorder = new Color(80, 40, 10);
 
     public GamePanel() {
         this.setPreferredSize(new Dimension(SCREEN_WIDTH, TOTAL_SCREEN_HEIGHT));
@@ -110,13 +119,11 @@ public class GamePanel extends JPanel implements Runnable {
 
         int currentId = 1;
 
-        // Gracze (ludzie) zawsze mają botDifficulty = 0, bo i tak z niego nie korzystają
         for(int i = 0; i < numberOfPlayers; i++) {
             players.add(new Player(this, inputs[i], currentId, colors[currentId-1], spawns[currentId-1][0], spawns[currentId-1][1], false, 0));
             currentId++;
         }
 
-        // ZMIANA: Boty otrzymują botDifficulty z menu!
         for(int i = 0; i < numberOfBots; i++) {
             if(currentId > 4) break;
             players.add(new Player(this, null, currentId, colors[currentId-1], spawns[currentId-1][0], spawns[currentId-1][1], true, botDifficulty));
@@ -199,12 +206,8 @@ public class GamePanel extends JPanel implements Runnable {
                     if (playTimer % 180 == 0) {
                         int rCol = (int)(Math.random() * MAX_SCREEN_COL);
                         int rRow = (int)(Math.random() * MAX_SCREEN_ROW);
-
                         double rand = Math.random();
-                        int type;
-                        if (rand < 0.5) type = (int)(Math.random() * 3);
-                        else if (rand < 0.8) type = 3 + (int)(Math.random() * 3);
-                        else type = 6;
+                        int type = (rand < 0.5) ? (int)(Math.random() * 3) : ((rand < 0.8) ? 3 + (int)(Math.random() * 3) : 6);
                         powerUps.add(new PowerUp(rCol, rRow, type));
                     }
                 }
@@ -318,7 +321,6 @@ public class GamePanel extends JPanel implements Runnable {
         int power = b.owner.bombPower;
 
         if (gameMode == 3) paintedMap[c][r] = b.owner.id;
-
         explosions.add(new Explosion(c, r));
         int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
 
@@ -346,10 +348,7 @@ public class GamePanel extends JPanel implements Runnable {
 
                     if ((gameMode == 1 || gameMode == 2) && Math.random() < 0.35) {
                         double rand = Math.random();
-                        int type;
-                        if (rand < 0.5) type = (int)(Math.random() * 3);
-                        else if (rand < 0.8) type = 3 + (int)(Math.random() * 3);
-                        else type = 6;
+                        int type = (rand < 0.5) ? (int)(Math.random() * 3) : ((rand < 0.8) ? 3 + (int)(Math.random() * 3) : 6);
                         powerUps.add(new PowerUp(nextCol, nextRow, type));
                     }
                     break;
@@ -374,8 +373,14 @@ public class GamePanel extends JPanel implements Runnable {
         g2.scale(scaleRatio, scaleRatio);
         g2.setClip(0, 0, SCREEN_WIDTH, TOTAL_SCREEN_HEIGHT);
 
-        g2.setColor(Color.BLACK);
-        g2.fillRect(0, 0, SCREEN_WIDTH, TOTAL_SCREEN_HEIGHT);
+        // ZMIANA WIZUALNA: Tło gry to teraz piękna trawiasta szachownica
+        for (int x = 0; x < MAX_SCREEN_COL; x++) {
+            for (int y = 0; y < MAX_SCREEN_ROW; y++) {
+                if ((x + y) % 2 == 0) g2.setColor(grassColor1);
+                else g2.setColor(grassColor2);
+                g2.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            }
+        }
 
         if (currentState == GameState.PLAY || currentState == GameState.PAUSE) {
 
@@ -399,11 +404,30 @@ public class GamePanel extends JPanel implements Runnable {
                     int screenY = y * TILE_SIZE;
 
                     if (map[x][y] == 1) {
-                        g2.setColor(Color.GRAY);
+                        // ZMIANA WIZUALNA: Ściana niezniszczalna (Szary blok 3D z krawędziami)
+                        g2.setColor(wallBase);
                         g2.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+
+                        g2.setColor(wallHighlight); // Światło z góry i lewej
+                        g2.fillRect(screenX, screenY, TILE_SIZE, 4);
+                        g2.fillRect(screenX, screenY, 4, TILE_SIZE);
+
+                        g2.setColor(wallShadow); // Cień z dołu i prawej
+                        g2.fillRect(screenX, screenY + TILE_SIZE - 4, TILE_SIZE, 4);
+                        g2.fillRect(screenX + TILE_SIZE - 4, screenY, 4, TILE_SIZE);
+
                     } else if (map[x][y] == 2) {
-                        g2.setColor(new Color(139, 69, 19));
+                        // ZMIANA WIZUALNA: Zniszczalna ściana (Drewniana skrzynia)
+                        g2.setColor(crateBase);
                         g2.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+
+                        g2.setColor(crateBorder); // Rama skrzyni
+                        g2.drawRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                        g2.drawRect(screenX + 2, screenY + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+
+                        // Znak 'X' na skrzyni
+                        g2.drawLine(screenX, screenY, screenX + TILE_SIZE, screenY + TILE_SIZE);
+                        g2.drawLine(screenX + TILE_SIZE, screenY, screenX, screenY + TILE_SIZE);
                     }
                 }
             }
