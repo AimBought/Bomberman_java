@@ -21,7 +21,7 @@ public class UI {
         titleFont = new Font("Impact", Font.BOLD, 56);
         normalFont = new Font("Arial", Font.BOLD, 28);
         smallFont = new Font("Arial", Font.BOLD, 18);
-        tinyFont = new Font("Arial", Font.PLAIN, 13); // Odrobinę mniejsza czcionka dla HUD
+        tinyFont = new Font("Arial", Font.PLAIN, 13);
     }
 
     public void draw(Graphics2D g2) {
@@ -35,6 +35,84 @@ public class UI {
                 if(gp.currentState == GameState.PAUSE) drawPauseScreen(g2);
                 break;
         }
+    }
+
+    // NOWE: Metoda rysująca na pustych bokach ekranu (wywoływana z GamePanel.java)
+    public void drawSidebars(Graphics2D g2, int winW, int winH, int sideWidth) {
+        // Rysujemy tylko w trakcie gry i jeśli pasek z boku ma przynajmniej 200px szerokości
+        if ((gp.currentState != GameState.PLAY && gp.currentState != GameState.PAUSE) || sideWidth < 200) return;
+
+        // 1. LEWY PASEK (Szczegóły Trybu Gry)
+        int leftX = 30;
+        int leftY = 80;
+
+        g2.setFont(new Font("Impact", Font.PLAIN, 28));
+        g2.setColor(goldColor);
+        g2.drawString("INFORMACJE", leftX, leftY);
+
+        g2.setFont(new Font("Arial", Font.BOLD, 16));
+        g2.setColor(Color.WHITE);
+
+        String modeName = "Klasyczny";
+        String modeDesc = "Zwykłe bomby.";
+        if (gp.gameMode == 1) { modeName = "Ulepszenia"; modeDesc = "Skrzynki dają nagrody!"; }
+        if (gp.gameMode == 2) { modeName = "Battle Royale"; modeDesc = "Uciekaj przed burzą!"; }
+        if (gp.gameMode == 3) { modeName = "Paint"; modeDesc = "Zamaluj najwięcej planszy!"; }
+
+        g2.setColor(highlightColor);
+        g2.drawString("Tryb: " + modeName, leftX, leftY + 30);
+        g2.setColor(Color.LIGHT_GRAY);
+        g2.setFont(new Font("Arial", Font.PLAIN, 13));
+        g2.drawString(modeDesc, leftX, leftY + 50);
+
+        leftY += 100;
+        g2.setFont(new Font("Impact", Font.PLAIN, 28));
+        g2.setColor(goldColor);
+        g2.drawString("MAPA", leftX, leftY);
+
+        g2.setFont(new Font("Arial", Font.BOLD, 16));
+        g2.setColor(highlightColor);
+        String mapName = gp.mapNames.isEmpty() ? "Brak" : gp.mapNames.get(gp.currentMapIndex);
+        g2.drawString(mapName, leftX, leftY + 30);
+
+        // 2. PRAWY PASEK (Legenda Przedmiotów)
+        if (gp.gameMode == 0) return; // W trybie klasycznym nie ma przedmiotów
+
+        int rightX = winW - sideWidth + 30;
+        int rightY = 80;
+        int spacing = 50;
+
+        g2.setFont(new Font("Impact", Font.PLAIN, 28));
+        g2.setColor(goldColor);
+        g2.drawString("LEGENDA", rightX, rightY);
+
+        g2.setFont(new Font("Arial", Font.BOLD, 14));
+        int iconSize = 24;
+
+        // Ikona 1: Zasięg
+        g2.setColor(Color.MAGENTA); g2.fillRect(rightX, rightY + spacing, iconSize, iconSize);
+        g2.setColor(Color.WHITE); g2.drawString("Zasięg Bomb", rightX + 35, rightY + spacing + 17);
+
+        // Ikona 2: Bomby
+        g2.setColor(Color.CYAN); g2.fillRect(rightX, rightY + spacing * 2, iconSize, iconSize);
+        g2.setColor(Color.WHITE); g2.drawString("Dodatkowa Bomba", rightX + 35, rightY + spacing * 2 + 17);
+
+        // Ikona 3: Szybkość
+        g2.setColor(Color.GREEN); g2.fillRect(rightX, rightY + spacing * 3, iconSize, iconSize);
+        g2.setColor(Color.WHITE); g2.drawString("Szybkość Ruchu", rightX + 35, rightY + spacing * 3 + 17);
+
+        // Ikona 4: Pancerz
+        g2.setColor(Color.LIGHT_GRAY); g2.fillArc(rightX, rightY + spacing * 4 + 4, iconSize, iconSize, 0, 180);
+        g2.setColor(Color.DARK_GRAY); g2.drawArc(rightX, rightY + spacing * 4 + 4, iconSize, iconSize, 0, 180);
+        g2.setColor(Color.WHITE); g2.drawString("Pancerz / Tarcza", rightX + 35, rightY + spacing * 4 + 17);
+
+        // Ikona 5: Klątwa
+        g2.setColor(Color.BLACK); g2.fillRect(rightX, rightY + spacing * 5, iconSize, iconSize);
+        g2.setColor(Color.RED); g2.drawRect(rightX, rightY + spacing * 5, iconSize, iconSize);
+        g2.setFont(new Font("Arial", Font.BOLD, 18));
+        g2.drawString("!", rightX + 8, rightY + spacing * 5 + 18);
+        g2.setFont(new Font("Arial", Font.BOLD, 14));
+        g2.setColor(Color.WHITE); g2.drawString("Klątwa (Ostrożnie!)", rightX + 35, rightY + spacing * 5 + 17);
     }
 
     private void drawShadowedText(Graphics2D g2, String text, int x, int y, Color mainColor) {
@@ -79,13 +157,11 @@ public class UI {
                 title += " (" + score + ")";
             }
 
-            // LINIJA 1: Nazwa gracza
             g2.setColor(Color.BLACK);
             g2.drawString(title, startX + 11, yStart + 23);
             g2.setColor(p.color);
             g2.drawString(title, startX + 10, yStart + 22);
 
-            // LINIJA 2: Status Gracza (Martwy / Klątwa / Pancerz)
             g2.setFont(tinyFont);
             int statusY = yStart + 42;
 
@@ -111,7 +187,6 @@ public class UI {
                 g2.drawString("STATUS: CZYSTY", startX + 10, statusY);
             }
 
-            // LINIJE 3 i 4: Statystyki na dwóch osobnych liniach
             g2.setColor(Color.LIGHT_GRAY);
             g2.drawString("Zasięg: " + p.bombPower + "   Bomby: " + p.maxBombs, startX + 10, yStart + 62);
             g2.drawString("Szybkość: " + p.speed, startX + 10, yStart + 82);

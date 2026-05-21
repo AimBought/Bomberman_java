@@ -6,6 +6,8 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.Shape;
+import java.awt.geom.AffineTransform;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -367,16 +369,18 @@ public class GamePanel extends JPanel implements Runnable {
         int winW = getWidth();
         int winH = getHeight();
 
-        // 1. NOWE: Rysujemy tło automatu (zanim przeskalujemy na mniejszą planszę)
-        g2.setColor(new Color(15, 10, 30)); // Ciemny fiolet
+        // ZAPISUJEMY stan ekranu bez skalowania
+        AffineTransform originalTransform = g2.getTransform();
+        Shape originalClip = g2.getClip();
+
+        g2.setColor(new Color(15, 10, 30));
         g2.fillRect(0, 0, winW, winH);
 
-        // Siatka retro na bokach ekranu
         g2.setColor(new Color(30, 20, 50));
         for(int i = 0; i < winW; i += 64) g2.drawLine(i, 0, i, winH);
         for(int i = 0; i < winH; i += 64) g2.drawLine(0, i, winW, i);
 
-        // 2. Skalowanie klasycznej planszy na sam środek monitora
+        // SKALOWANIE planszy
         double scaleRatio = Math.min((double) winW / SCREEN_WIDTH, (double) winH / TOTAL_SCREEN_HEIGHT);
         int drawX = (int) ((winW - (SCREEN_WIDTH * scaleRatio)) / 2);
         int drawY = (int) ((winH - (TOTAL_SCREEN_HEIGHT * scaleRatio)) / 2);
@@ -384,13 +388,10 @@ public class GamePanel extends JPanel implements Runnable {
         g2.translate(drawX, drawY);
         g2.scale(scaleRatio, scaleRatio);
 
-        // Biała ramka odcinająca grę od tła
         g2.setColor(Color.WHITE);
         g2.drawRect(-1, -1, SCREEN_WIDTH + 1, TOTAL_SCREEN_HEIGHT + 1);
 
         g2.setClip(0, 0, SCREEN_WIDTH, TOTAL_SCREEN_HEIGHT);
-
-        // Czarne tło za samą planszą
         g2.setColor(Color.BLACK);
         g2.fillRect(0, 0, SCREEN_WIDTH, TOTAL_SCREEN_HEIGHT);
 
@@ -462,6 +463,14 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         ui.draw(g2);
+
+        // NOWE: RESETUJEMY ustawienia ekranu po narysowaniu gry
+        g2.setTransform(originalTransform);
+        g2.setClip(originalClip);
+
+        // Rysujemy legendę na pustych bokach okna (jeśli jest tam miejsce)
+        ui.drawSidebars(g2, winW, winH, drawX);
+
         g2.dispose();
     }
 }

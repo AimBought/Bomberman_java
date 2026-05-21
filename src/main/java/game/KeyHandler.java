@@ -69,7 +69,7 @@ public class KeyHandler implements KeyListener {
         else if (gp.currentState == GameState.MENU) {
             if (code == KeyEvent.VK_W || code == KeyEvent.VK_UP) {
                 gp.ui.commandNum--;
-                if (gp.ui.commandNum < 0) gp.ui.commandNum = 7; // ZMIANA: Menu 0-7
+                if (gp.ui.commandNum < 0) gp.ui.commandNum = 7;
             }
             if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) {
                 gp.ui.commandNum++;
@@ -80,12 +80,17 @@ public class KeyHandler implements KeyListener {
                     gp.numberOfPlayers--;
                     if (gp.numberOfPlayers < 1) gp.numberOfPlayers = 4;
                     if (gp.numberOfPlayers + gp.numberOfBots > 4) gp.numberOfBots = 4 - gp.numberOfPlayers;
+
+                    // ZABEZPIECZENIE: Zawsze minimum 2 postacie na mapie
+                    if (gp.numberOfPlayers == 1 && gp.numberOfBots == 0) gp.numberOfBots = 1;
                 }
                 if (gp.ui.commandNum == 2) {
                     gp.numberOfBots--;
-                    if (gp.numberOfBots < 0) gp.numberOfBots = 4 - gp.numberOfPlayers;
+                    // ZABEZPIECZENIE: Jeśli gramy sami, minimum to 1 bot
+                    int minBots = (gp.numberOfPlayers == 1) ? 1 : 0;
+                    if (gp.numberOfBots < minBots) gp.numberOfBots = 4 - gp.numberOfPlayers;
                 }
-                if (gp.ui.commandNum == 3) { // NOWE: Zmiana Poziomu Bota
+                if (gp.ui.commandNum == 3) {
                     gp.botDifficulty = (gp.botDifficulty == 0) ? 1 : 0;
                 }
                 if (gp.ui.commandNum == 4) {
@@ -102,12 +107,18 @@ public class KeyHandler implements KeyListener {
                     gp.numberOfPlayers++;
                     if (gp.numberOfPlayers > 4) gp.numberOfPlayers = 1;
                     if (gp.numberOfPlayers + gp.numberOfBots > 4) gp.numberOfBots = 4 - gp.numberOfPlayers;
+
+                    // ZABEZPIECZENIE: Zawsze minimum 2 postacie na mapie
+                    if (gp.numberOfPlayers == 1 && gp.numberOfBots == 0) gp.numberOfBots = 1;
                 }
                 if (gp.ui.commandNum == 2) {
                     gp.numberOfBots++;
-                    if (gp.numberOfBots > 4 - gp.numberOfPlayers) gp.numberOfBots = 0;
+                    // ZABEZPIECZENIE: Pilnujemy limitu
+                    if (gp.numberOfBots > 4 - gp.numberOfPlayers) {
+                        gp.numberOfBots = (gp.numberOfPlayers == 1) ? 1 : 0;
+                    }
                 }
-                if (gp.ui.commandNum == 3) { // NOWE: Zmiana Poziomu Bota
+                if (gp.ui.commandNum == 3) {
                     gp.botDifficulty = (gp.botDifficulty == 0) ? 1 : 0;
                 }
                 if (gp.ui.commandNum == 4) {
