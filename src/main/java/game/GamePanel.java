@@ -369,7 +369,6 @@ public class GamePanel extends JPanel implements Runnable {
         int winW = getWidth();
         int winH = getHeight();
 
-        // ZAPISUJEMY stan ekranu bez skalowania
         AffineTransform originalTransform = g2.getTransform();
         Shape originalClip = g2.getClip();
 
@@ -380,7 +379,6 @@ public class GamePanel extends JPanel implements Runnable {
         for(int i = 0; i < winW; i += 64) g2.drawLine(i, 0, i, winH);
         for(int i = 0; i < winH; i += 64) g2.drawLine(0, i, winW, i);
 
-        // SKALOWANIE planszy
         double scaleRatio = Math.min((double) winW / SCREEN_WIDTH, (double) winH / TOTAL_SCREEN_HEIGHT);
         int drawX = (int) ((winW - (SCREEN_WIDTH * scaleRatio)) / 2);
         int drawY = (int) ((winH - (TOTAL_SCREEN_HEIGHT * scaleRatio)) / 2);
@@ -397,20 +395,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         if (currentState == GameState.PLAY || currentState == GameState.PAUSE) {
 
-            if (gameMode == 3) {
-                for (int x = 0; x < MAX_SCREEN_COL; x++) {
-                    for (int y = 0; y < MAX_SCREEN_ROW; y++) {
-                        int ownerId = paintedMap[x][y];
-                        if (ownerId > 0) {
-                            Color c = Color.WHITE;
-                            for (Player p : players) if (p.id == ownerId) c = p.color;
-                            g2.setColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), 120));
-                            g2.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                        }
-                    }
-                }
-            }
-
+            // 1. NAJPIERW rysujemy szachownicę z trawą
             for (int x = 0; x < MAX_SCREEN_COL; x++) {
                 for (int y = 0; y < MAX_SCREEN_ROW; y++) {
                     if ((x + y) % 2 == 0) g2.setColor(grassColor1);
@@ -419,6 +404,22 @@ public class GamePanel extends JPanel implements Runnable {
                 }
             }
 
+            // 2. POTEM rysujemy farbę (teraz ładnie nałoży się na trawę)
+            if (gameMode == 3) {
+                for (int x = 0; x < MAX_SCREEN_COL; x++) {
+                    for (int y = 0; y < MAX_SCREEN_ROW; y++) {
+                        int ownerId = paintedMap[x][y];
+                        if (ownerId > 0) {
+                            Color c = Color.WHITE;
+                            for (Player p : players) if (p.id == ownerId) c = p.color;
+                            g2.setColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), 180)); // Widoczniejsza farba
+                            g2.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        }
+                    }
+                }
+            }
+
+            // 3. NA KOŃCU rysujemy ściany i obiekty, żeby nie były zamalowane
             for (int x = 0; x < MAX_SCREEN_COL; x++) {
                 for (int y = 0; y < MAX_SCREEN_ROW; y++) {
                     int screenX = x * TILE_SIZE;
@@ -444,6 +445,7 @@ public class GamePanel extends JPanel implements Runnable {
                     }
                 }
             }
+
             for (PowerUp p : powerUps) p.draw(g2);
             for (Bomb b : bombs) b.draw(g2);
             for (Explosion e : explosions) e.draw(g2);
@@ -464,11 +466,9 @@ public class GamePanel extends JPanel implements Runnable {
 
         ui.draw(g2);
 
-        // NOWE: RESETUJEMY ustawienia ekranu po narysowaniu gry
         g2.setTransform(originalTransform);
         g2.setClip(originalClip);
 
-        // Rysujemy legendę na pustych bokach okna (jeśli jest tam miejsce)
         ui.drawSidebars(g2, winW, winH, drawX);
 
         g2.dispose();
