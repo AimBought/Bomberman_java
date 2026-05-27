@@ -34,13 +34,69 @@ public class UI {
                 drawPlayHUD(g2);
                 if(gp.currentState == GameState.PAUSE) drawPauseScreen(g2);
                 break;
+            case EDITOR:
+                drawEditorHUD(g2); // ZMIANA: Rysuj panel dolny kreatora
+                break;
             case EDITOR_NAMING:
+                drawEditorHUD(g2); // ZMIANA: Trzymaj tło pod spodem, by nie migało czernią
                 drawEditorNamingScreen(g2);
                 break;
         }
     }
 
-    // NOWE: Nakładka z pytaniem o nazwę mapy (Rysowana nad edytorem)
+    // NOWE: Metoda rysująca piękny dolny HUD edytora z podziałem na kolumny
+    private void drawEditorHUD(Graphics2D g2) {
+        int yStart = GamePanel.SCREEN_HEIGHT;
+
+        // Tło panelu edytora
+        g2.setColor(new Color(15, 15, 20));
+        g2.fillRect(0, yStart - 1, GamePanel.SCREEN_WIDTH, GamePanel.HUD_HEIGHT + 2);
+
+        // Górna złota linia oddzielająca planszę od HUDu
+        g2.setColor(goldColor);
+        g2.setStroke(new BasicStroke(3));
+        g2.drawLine(0, yStart, GamePanel.SCREEN_WIDTH, yStart);
+        g2.setStroke(new BasicStroke(1));
+
+        // Rozdzielające pionowe linie ciemnoszare
+        g2.setColor(Color.DARK_GRAY);
+        g2.drawLine(220, yStart, 220, GamePanel.TOTAL_SCREEN_HEIGHT);
+        g2.drawLine(490, yStart, 490, GamePanel.TOTAL_SCREEN_HEIGHT);
+
+        // KOLUMNA 1: Dane Statusowe
+        g2.setFont(smallFont);
+        g2.setColor(goldColor);
+        g2.drawString("KREATOR MAP", 20, yStart + 26);
+
+        g2.setFont(tinyFont);
+        g2.setColor(Color.WHITE);
+        g2.drawString("Pozycja: [" + gp.editorCursorCol + ", " + gp.editorCursorRow + "]", 20, yStart + 52);
+        g2.setColor(Color.LIGHT_GRAY);
+        g2.drawString("Ruch: WSAD / Strzałki", 20, yStart + 76);
+
+        // KOLUMNA 2: Pędzle Malowania
+        g2.setFont(smallFont);
+        g2.setColor(Color.WHITE);
+        g2.drawString("PĘDZLE MALARSKIE", 240, yStart + 26);
+
+        g2.setFont(tinyFont);
+        g2.setColor(Color.LIGHT_GRAY);
+        g2.drawString("[1] - Ściana twarda (Szary)", 240, yStart + 48);
+        g2.drawString("[2] - Skrzynia niszczalna (Brąz)", 240, yStart + 68);
+        g2.drawString("[3] lub [0] - Gumka (Usuń)", 240, yStart + 88);
+
+        // KOLUMNA 3: Zarządzanie Plikiem
+        g2.setFont(smallFont);
+        g2.setColor(highlightColor);
+        g2.drawString("ZAPIS / WYJŚCIE", 510, yStart + 26);
+
+        g2.setFont(tinyFont);
+        g2.setColor(Color.WHITE);
+        g2.drawString("[ENTER] - Zatwierdź i nazwij", 510, yStart + 52);
+        g2.setColor(Color.GRAY);
+        g2.drawString("[ESC] - Porzuć i wyjdź", 510, yStart + 76);
+    }
+
     private void drawEditorNamingScreen(Graphics2D g2) {
         g2.setColor(new Color(0, 0, 0, 220));
         g2.fillRect(0, 0, GamePanel.SCREEN_WIDTH, GamePanel.TOTAL_SCREEN_HEIGHT);
@@ -52,7 +108,7 @@ public class UI {
         drawShadowedText(g2, title, titleX, titleY, goldColor);
 
         g2.setColor(Color.WHITE);
-        String nameToDraw = gp.newMapName + "_"; // Podkreślnik symulujący kursor
+        String nameToDraw = gp.newMapName + "_";
         int nameX = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(nameToDraw) / 2;
         int nameY = GamePanel.TOTAL_SCREEN_HEIGHT / 2 + 10;
         g2.drawString(nameToDraw, nameX, nameY);
@@ -288,11 +344,8 @@ public class UI {
 
             if (commandNum == i) {
                 g2.setColor(highlightColor); g2.drawString(">> " + options[i] + " <<", x - 40, y);
-
-                // NOWE: Dynamiczna podpowiedź przy mapie
                 if (i == 4 && isCustom) {
-                    g2.setFont(tinyFont);
-                    g2.setColor(Color.YELLOW);
+                    g2.setFont(tinyFont); g2.setColor(Color.YELLOW);
                     String hint = "[E] Edytuj mapę   [BACKSPACE] Usuń mapę";
                     int hintX = GamePanel.SCREEN_WIDTH / 2 - g2.getFontMetrics().stringWidth(hint) / 2;
                     g2.drawString(hint, hintX, y + 20);

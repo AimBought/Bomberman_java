@@ -71,7 +71,7 @@ public class GamePanel extends JPanel implements Runnable {
     public int editorCursorCol = 0;
     public int editorCursorRow = 0;
     public int[][] editorMap = new int[MAX_SCREEN_COL][MAX_SCREEN_ROW];
-    public String newMapName = ""; // NOWE: Przechowuje wpisywaną nazwę
+    public String newMapName = "";
 
     Color grassColor1 = new Color(34, 139, 34);
     Color grassColor2 = new Color(40, 150, 40);
@@ -117,12 +117,10 @@ public class GamePanel extends JPanel implements Runnable {
                     }
                 }
             }
-
             if(mapNames.isEmpty()) mapNames.add("Brak Mapy");
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    // NOWE: Mechanika inicjalizacji edytora na pustej lub istniejącej planszy
     public void initEditor(boolean editExisting) {
         editorMap = new int[MAX_SCREEN_COL][MAX_SCREEN_ROW];
         editorCursorCol = 0;
@@ -137,11 +135,9 @@ public class GamePanel extends JPanel implements Runnable {
             String currentName = mapNames.get(currentMapIndex);
             if (currentName.startsWith("custom:")) newMapName = currentName.substring(7);
         }
-
         currentState = GameState.EDITOR;
     }
 
-    // NOWE: Zapis z podaną nazwą
     public void saveEditorMap() {
         File folder = new File("custom_maps");
         if (!folder.exists()) folder.mkdir();
@@ -160,9 +156,7 @@ public class GamePanel extends JPanel implements Runnable {
                 bw.newLine();
             }
             bw.close();
-
             scanMapFolder();
-            // Wyszukaj i ustaw index na zapisaną mapę
             for (int i = 0; i < mapNames.size(); i++) {
                 if (mapNames.get(i).equals("custom:" + fileName.replace(".txt", ""))) {
                     currentMapIndex = i;
@@ -172,7 +166,6 @@ public class GamePanel extends JPanel implements Runnable {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    // NOWE: Bezpieczne usunięcie wybranej mapy z dysku
     public void deleteCustomMap() {
         if (mapNames.isEmpty()) return;
         String name = mapNames.get(currentMapIndex);
@@ -185,12 +178,8 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void resetGame() {
-        players.clear();
-        bombs.clear();
-        explosions.clear();
-        powerUps.clear();
-        playTimer = 0; deathTimer = 300; roundEnded = false; winnerId = -1;
-        stormPhase = 0; stormTimer = 0;
+        players.clear(); bombs.clear(); explosions.clear(); powerUps.clear();
+        playTimer = 0; deathTimer = 300; roundEnded = false; winnerId = -1; stormPhase = 0; stormTimer = 0;
         paintedMap = new int[MAX_SCREEN_COL][MAX_SCREEN_ROW]; paintTimeLeft = 3600;
 
         int[][] spawns = { {0, 0}, {MAX_SCREEN_COL - 1, MAX_SCREEN_ROW - 1}, {MAX_SCREEN_COL - 1, 0}, {0, MAX_SCREEN_ROW - 1} };
@@ -458,6 +447,7 @@ public class GamePanel extends JPanel implements Runnable {
             }
         }
         else if (currentState == GameState.EDITOR || currentState == GameState.EDITOR_NAMING) {
+            // ZMIANA: Usunięto nakładający się górny czarny pasek. Cała plansza jest wolna.
             for (int x = 0; x < MAX_SCREEN_COL; x++) {
                 for (int y = 0; y < MAX_SCREEN_ROW; y++) {
                     if ((x + y) % 2 == 0) g2.setColor(grassColor1); else g2.setColor(grassColor2);
@@ -480,10 +470,6 @@ public class GamePanel extends JPanel implements Runnable {
                 g2.setColor(Color.RED); g2.setStroke(new BasicStroke(4));
                 g2.drawRect(editorCursorCol * TILE_SIZE, editorCursorRow * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 g2.setStroke(new BasicStroke(1));
-
-                g2.setColor(new Color(0, 0, 0, 200)); g2.fillRect(0, 0, SCREEN_WIDTH, 26);
-                g2.setColor(Color.WHITE); g2.setFont(new Font("Arial", Font.BOLD, 12));
-                g2.drawString("EDYCJA: [1] Mur  [2] Skrzynia  [3] Usuń    DALEJ: [ENTER]    WYJDŹ: [ESC]", 15, 18);
             }
         }
 
