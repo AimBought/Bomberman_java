@@ -1,4 +1,6 @@
-package game;
+package game.entity;
+
+import game.core.GamePanel;
 
 import java.awt.Color;
 import java.awt.Font;

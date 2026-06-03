@@ -1,10 +1,16 @@
-package game;
+package game.core;
+
+import game.entity.Bomb;
+import game.entity.Explosion;
+import game.entity.Player;
+import game.entity.PowerUp;
+import game.ui.KeyHandler;
+import game.ui.UI;
 
 import javax.swing.JPanel;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;

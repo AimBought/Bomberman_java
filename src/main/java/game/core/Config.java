@@ -1,4 +1,6 @@
-package game;
+package game.core;
+
+import game.ui.KeyHandler;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;

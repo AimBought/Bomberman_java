@@ -1,4 +1,7 @@
-package game;
+package game.ui;
+
+import game.core.GamePanel;
+import game.core.GameState;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;

@@ -1,4 +1,8 @@
-package game;
+package game.ui;
+
+import game.core.GamePanel;
+import game.core.GameState;
+import game.entity.Player;
 
 import java.awt.BasicStroke;
 import java.awt.Color;

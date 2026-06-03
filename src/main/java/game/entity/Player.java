@@ -1,4 +1,7 @@
-package game;
+package game.entity;
+
+import game.core.GamePanel;
+import game.ui.KeyHandler;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
