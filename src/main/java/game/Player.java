@@ -39,6 +39,11 @@ public class Player {
     private int botDir = 0;
     private boolean botBomb = false;
 
+    // NOWE: Zmienne do obsługi animacji proceduralnej
+    public int spriteCounter = 0;
+    public int spriteNum = 1;
+    public boolean isMoving = false;
+
     public Player(GamePanel gp, KeyHandler.PlayerInput input, int id, Color color, int startCol, int startRow, boolean isBot, int botDifficulty) {
         this.gp = gp;
         this.input = input;
@@ -104,7 +109,6 @@ public class Player {
                     botTimer = 15;
                     botBomb = false;
 
-                    // ZMIANA: Poprawione odwołania do GamePanel.TILE_SIZE
                     int myCol = (x + GamePanel.TILE_SIZE / 2) / GamePanel.TILE_SIZE;
                     int myRow = (y + GamePanel.TILE_SIZE / 2) / GamePanel.TILE_SIZE;
                     boolean imSafe = isTileSafe(myCol, myRow);
@@ -113,7 +117,6 @@ public class Player {
                     int minDist = 999;
                     for (Player p : gp.players) {
                         if (!p.isDead && !p.isBot) {
-                            // ZMIANA: Poprawione odwołania do GamePanel.TILE_SIZE
                             int dist = Math.abs((p.x/GamePanel.TILE_SIZE) - myCol) + Math.abs((p.y/GamePanel.TILE_SIZE) - myRow);
                             if (dist < minDist) { minDist = dist; target = p; }
                         }
@@ -144,7 +147,6 @@ public class Player {
                         else score -= 1000;
 
                         if (target != null) {
-                            // ZMIANA: Poprawione odwołania do GamePanel.TILE_SIZE
                             int distToTarget = Math.abs((target.x/GamePanel.TILE_SIZE) - testCol) + Math.abs((target.y/GamePanel.TILE_SIZE) - testRow);
                             score -= distToTarget * 10;
                         }
@@ -196,7 +198,6 @@ public class Player {
         }
 
         if (bomb && bombCooldown == 0 && bombsPlaced < maxBombs) {
-            // ZMIANA: Poprawione odwołania do GamePanel.TILE_SIZE
             int centerCol = (x + GamePanel.TILE_SIZE / 2) / GamePanel.TILE_SIZE;
             int centerRow = (y + GamePanel.TILE_SIZE / 2) / GamePanel.TILE_SIZE;
             gp.bombs.add(new Bomb(centerCol, centerRow, this));
@@ -204,13 +205,25 @@ public class Player {
             bombCooldown = 30;
         }
 
+        isMoving = false;
         int nextX = x;
         int nextY = y;
 
-        if (up) nextY -= speed;
-        if (down) nextY += speed;
-        if (left) nextX -= speed;
-        if (right) nextX += speed;
+        if (up) { nextY -= speed; isMoving = true; }
+        if (down) { nextY += speed; isMoving = true; }
+        if (left) { nextX -= speed; isMoving = true; }
+        if (right) { nextX += speed; isMoving = true; }
+
+        // NOWE: Odmierzanie klatek do animacji nóg
+        if (isMoving) {
+            spriteCounter++;
+            if (spriteCounter > 8) { // Szybkość przebierania nogami
+                spriteNum = (spriteNum == 1) ? 2 : 1;
+                spriteCounter = 0;
+            }
+        } else {
+            spriteNum = 1; // Powrót do pozycji stojącej
+        }
 
         if (!checkCollision(nextX, y)) x = nextX;
         else if (isBot) botTimer = 0;
@@ -237,17 +250,46 @@ public class Player {
     }
 
     public void draw(Graphics2D g2) {
-        if (isDead) g2.setColor(Color.DARK_GRAY);
-        else if (invincibleTimer > 0 && invincibleTimer % 10 < 5) g2.setColor(Color.WHITE);
-        else g2.setColor(color);
+        Color bodyColor;
+        if (isDead) bodyColor = Color.DARK_GRAY;
+        else if (invincibleTimer > 0 && invincibleTimer % 10 < 5) bodyColor = Color.WHITE;
+        else bodyColor = color;
 
-        g2.fillRect(x + drawOffset, y + drawOffset, drawSize, drawSize);
+        // Rysowanie animowanych nóg (pod ciałem)
+        g2.setColor(bodyColor.darker().darker());
+        int footW = 8;
+        int footH = 10;
+        int leftFootY = y + drawOffset + drawSize - 4;
+        int rightFootY = y + drawOffset + drawSize - 4;
 
+        if (isMoving && !isDead) {
+            if (spriteNum == 1) leftFootY -= 6; // Podniesienie lewej nogi
+            else rightFootY -= 6; // Podniesienie prawej nogi
+        }
+
+        g2.fillRect(x + drawOffset + 4, leftFootY, footW, footH);
+        g2.fillRect(x + drawOffset + drawSize - 12, rightFootY, footW, footH);
+
+        // Ciało postaci
+        int bodyY = y + drawOffset;
+        if (isMoving && !isDead && spriteNum == 1) bodyY -= 2; // Ciało lekko podskakuje przy kroku
+
+        g2.setColor(bodyColor);
+        g2.fillRect(x + drawOffset, bodyY, drawSize, drawSize);
+
+        // Oczy (Nadają postaci wyrazu)
+        if (!isDead) {
+            g2.setColor(Color.BLACK);
+            g2.fillRect(x + drawOffset + 6, bodyY + 6, 6, 6);
+            g2.fillRect(x + drawOffset + 20, bodyY + 6, 6, 6);
+        }
+
+        // Pancerz
         if (armorCount > 0 && !isDead) {
             g2.setColor(Color.LIGHT_GRAY);
-            g2.fillArc(x + drawOffset, y + drawOffset - 4, drawSize, drawSize, 0, 180);
+            g2.fillArc(x + drawOffset, bodyY - 4, drawSize, drawSize, 0, 180);
             g2.setColor(Color.DARK_GRAY);
-            g2.drawArc(x + drawOffset, y + drawOffset - 4, drawSize, drawSize, 0, 180);
+            g2.drawArc(x + drawOffset, bodyY - 4, drawSize, drawSize, 0, 180);
         }
     }
 }
